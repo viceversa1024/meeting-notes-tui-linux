@@ -63,8 +63,6 @@ class NoteMaker:
         if ai_provider in ["openai", "anthropic", "openrouter"]:
             if not CLOUD_AVAILABLE:
                 logger.warning("Cloud AI packages not installed")
-                print(f"Warning: Cloud AI packages not installed. Run: pip install openai anthropic openrouter")
-                print("Disabling AI summarization")
                 self.ai_provider = "none"
             else:
                 try:
@@ -74,28 +72,22 @@ class NoteMaker:
                         self.summarizer = OpenAISummarizer(api_key=api_key, model=ai_model)
                         model_name = OpenAISummarizer.MODELS[ai_model]["name"]
                         logger.info(f"AI summarization enabled (OpenAI: {model_name})")
-                        print(f"AI summarization enabled (OpenAI: {model_name})")
                     elif ai_provider == "anthropic":
                         self.summarizer = AnthropicSummarizer(api_key=api_key, model=ai_model)
                         model_name = AnthropicSummarizer.MODELS[ai_model]["name"]
                         logger.info(f"AI summarization enabled (Anthropic: {model_name})")
-                        print(f"AI summarization enabled (Anthropic: {model_name})")
                     elif ai_provider == "openrouter":
                         self.summarizer = OpenRouterSummarizer(api_key=api_key, model=ai_model)
                         model_name = OpenRouterSummarizer.MODELS[ai_model]["name"]
                         logger.info(f"AI summarization enabled (OpenRouter: {model_name})")
-                        print(f"AI summarization enabled (OpenRouter: {model_name})")
                         
                 except Exception as e:
                     logger.error(f"Could not initialize cloud AI: {e}", exc_info=True)
-                    print(f"Warning: Could not initialize cloud AI: {e}")
                     self.ai_provider = "none"
                     
         elif ai_provider == "local":
             if not OLLAMA_AVAILABLE:
                 logger.warning("Ollama not available")
-                print("Warning: Ollama not available")
-                print("Disabling AI summarization")
                 self.ai_provider = "none"
             else:
                 try:
@@ -104,10 +96,8 @@ class NoteMaker:
                     # `ollama run "" <prompt>` and errors with "model is required".
                     self.summarizer = OllamaSummarizer(model=ai_model or "llama3.2:3b")
                     logger.info(f"AI summarization enabled (Local Ollama: {ai_model})")
-                    print(f"AI summarization enabled (Local Ollama: {ai_model})")
                 except Exception as e:
                     logger.error(f"Could not initialize Ollama: {e}", exc_info=True)
-                    print(f"Warning: Could not initialize Ollama: {e}")
                     self.ai_provider = "none"
     
     def create_note(
@@ -146,10 +136,8 @@ class NoteMaker:
             try:
                 if self.ai_provider in ["openai", "anthropic", "openrouter"]:
                     logger.info("Generating AI summary with cloud API")
-                    print("Generating AI summary with cloud API (fast)...")
                 else:
                     logger.info("Generating AI summary with local Ollama")
-                    print("Generating AI summary with local Ollama (this may take a while)...")
                     
                 ai_summary = self.summarizer.summarize(transcript_text, user_notes=user_notes)
                 summary = {
@@ -162,8 +150,6 @@ class NoteMaker:
             except Exception as e:
                 ai_error = f"AI summarization failed: {type(e).__name__}: {str(e)}"
                 logger.error(ai_error, exc_info=True)
-                print(f"Warning: {ai_error}")
-                print("Falling back to simple summary")
                 summary = self._extract_simple_summary(transcript_text)
         else:
             logger.info("Using simple keyword-based summary (AI disabled)")

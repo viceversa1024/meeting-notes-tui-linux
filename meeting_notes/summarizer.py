@@ -1,10 +1,25 @@
 """
 AI-powered meeting summarizer using Ollama.
 """
+import re
 import subprocess
 import json
 from dataclasses import dataclass
 from typing import List, Optional
+
+from .logger import get_logger
+
+logger = get_logger(__name__)
+
+
+# Matches ANSI escape sequences (CSI cursor moves, erase-line, show/hide
+# cursor, etc.) that `ollama run` writes to stdout for its progress spinner.
+_ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences and stray carriage returns from text."""
+    return _ANSI_RE.sub('', text).replace('\r', '')
 
 
 @dataclass
@@ -40,8 +55,8 @@ class OllamaSummarizer:
         Returns:
             MeetingSummary with structured data
         """
-        print(f"Generating AI summary with {self.model}...")
-        
+        logger.info(f"Generating AI summary with {self.model}...")
+
         prompt = self._build_prompt(transcript, user_notes=user_notes)
         response = self._call_ollama(prompt)
         summary = self._parse_response(response)
@@ -141,27 +156,62 @@ PARTICIPANTS:
 """
     
     def _call_ollama(self, prompt: str) -> str:
-        """Call Ollama API and get response."""
+        """Get a completion from Ollama.
+
+        Prefers the local HTTP API (``/api/generate`` with ``stream=false``),
+        which returns clean text. Falls back to the ``ollama run`` CLI only if
+        the daemon isn't reachable — and scrubs the CLI's ANSI spinner codes,
+        which otherwise leave control sequences and half-rendered word
+        fragments in the saved note.
+        """
         try:
-            # Use ollama run command
+            return self._call_ollama_api(prompt)
+        except Exception as api_exc:
+            try:
+                return self._call_ollama_cli(prompt)
+            except Exception as cli_exc:
+                raise RuntimeError(
+                    f"Ollama error (API: {api_exc}; CLI: {cli_exc})"
+                )
+
+    def _call_ollama_api(self, prompt: str) -> str:
+        """Call the Ollama HTTP API. Returns the response text."""
+        import json as _json
+        import os
+        import urllib.request
+
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+        if not host.startswith("http"):
+            host = f"http://{host}"
+        payload = _json.dumps(
+            {"model": self.model, "prompt": prompt, "stream": False}
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            f"{host}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+        return (data.get("response") or "").strip()
+
+    def _call_ollama_cli(self, prompt: str) -> str:
+        """Fallback: call the ``ollama run`` CLI and strip its spinner codes."""
+        try:
             result = subprocess.run(
                 ['ollama', 'run', self.model, prompt],
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
-            
             if result.returncode != 0:
                 raise RuntimeError(f"Ollama failed: {result.stderr}")
-                
-            return result.stdout.strip()
-            
+            return _strip_ansi(result.stdout).strip()
         except subprocess.TimeoutExpired:
             raise RuntimeError("Ollama summarization timed out (5 minutes)")
         except FileNotFoundError:
             raise RuntimeError("Ollama not found. Is it installed?")
-        except Exception as e:
-            raise RuntimeError(f"Ollama error: {e}")
     
     def _parse_response(self, response: str) -> MeetingSummary:
         """Parse the AI response into structured data."""

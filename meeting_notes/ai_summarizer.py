@@ -263,8 +263,6 @@ class OpenAISummarizer(BaseSummarizer):
         """Generate summary using OpenAI with retry logic."""
         logger.info(f"Generating AI summary with {self.model_config['name']}...")
         logger.info(f"Transcript: {len(transcript.split())} words")
-        print(f"Generating AI summary with {self.model_config['name']}...")
-        print(f"Transcript: {len(transcript.split())} words")
         
         max_retries = 2
         retry_delay = 2  # seconds
@@ -287,7 +285,6 @@ class OpenAISummarizer(BaseSummarizer):
                 )
                 
                 logger.info(f"✓ Summary generated ({input_tokens + output_tokens} tokens, ${cost:.4f})")
-                print(f"✓ Summary generated ({input_tokens + output_tokens} tokens, ${cost:.4f})")
                 
                 return self._parse_response(response.choices[0].message.content)
                 
@@ -296,7 +293,6 @@ class OpenAISummarizer(BaseSummarizer):
                 
                 if attempt < max_retries - 1:
                     logger.warning(error_msg + f" - Retrying in {retry_delay}s...")
-                    print(f"⚠ {error_msg} - Retrying in {retry_delay}s...")
                     time.sleep(retry_delay)
                 else:
                     logger.error(f"All {max_retries} attempts failed for OpenAI API call")
@@ -343,8 +339,6 @@ class AnthropicSummarizer(BaseSummarizer):
         """Generate summary using Anthropic with retry logic."""
         logger.info(f"Generating AI summary with {self.model_config['name']}...")
         logger.info(f"Transcript: {len(transcript.split())} words")
-        print(f"Generating AI summary with {self.model_config['name']}...")
-        print(f"Transcript: {len(transcript.split())} words")
         
         max_retries = 2
         retry_delay = 2  # seconds
@@ -367,7 +361,6 @@ class AnthropicSummarizer(BaseSummarizer):
                 )
                 
                 logger.info(f"✓ Summary generated ({input_tokens + output_tokens} tokens, ${cost:.4f})")
-                print(f"✓ Summary generated ({input_tokens + output_tokens} tokens, ${cost:.4f})")
                 
                 return self._parse_response(response.content[0].text)
                 
@@ -376,7 +369,6 @@ class AnthropicSummarizer(BaseSummarizer):
                 
                 if attempt < max_retries - 1:
                     logger.warning(error_msg + f" - Retrying in {retry_delay}s...")
-                    print(f"⚠ {error_msg} - Retrying in {retry_delay}s...")
                     time.sleep(retry_delay)
                 else:
                     logger.error(f"All {max_retries} attempts failed for Anthropic API call")
@@ -426,8 +418,6 @@ class OpenRouterSummarizer(BaseSummarizer):
         """Generate summary using OpenRouter with retry logic."""
         logger.info(f"Generating AI summary with {self.model_config['name']}...")
         logger.info(f"Transcript: {len(transcript.split())} words")
-        print(f"Generating AI summary with {self.model_config['name']}...")
-        print(f"Transcript: {len(transcript.split())} words")
         
         max_retries = 2
         retry_delay = 2  # seconds
@@ -448,10 +438,8 @@ class OpenRouterSummarizer(BaseSummarizer):
                     tokens_used = response.usage.total_tokens
                     estimated_cost = tokens_used * self.model_config['cost_per_1k_tokens'] / 1000
                     logger.info(f"✓ Summary generated ({tokens_used} tokens, ~${estimated_cost:.4f})")
-                    print(f"✓ Summary generated ({tokens_used} tokens, ~${estimated_cost:.4f})")
                 else:
                     logger.info("✓ Summary generated")
-                    print(f"✓ Summary generated")
                 
                 return self._parse_response(response_text)
                 
@@ -460,7 +448,6 @@ class OpenRouterSummarizer(BaseSummarizer):
                 
                 if attempt < max_retries - 1:
                     logger.warning(error_msg + f" - Retrying in {retry_delay}s...")
-                    print(f"⚠ {error_msg} - Retrying in {retry_delay}s...")
                     time.sleep(retry_delay)
                 else:
                     logger.error(f"All {max_retries} attempts failed for OpenRouter API call")

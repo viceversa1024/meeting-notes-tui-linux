@@ -38,13 +38,17 @@ def setup_logging(debug: bool = False) -> None:
     # Clear any existing handlers to avoid duplicates
     root_logger.handlers.clear()
     
-    # 1. Console handler - INFO or DEBUG depending on debug flag
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG if debug else logging.INFO)
-    console_formatter = logging.Formatter('%(message)s')
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
-    
+    # 1. Console handler - DEBUG only. This writes to stderr, which paints
+    # directly over the Textual TUI and corrupts the screen, so it is left OFF
+    # during normal runs. Everything still lands in the log files below; enable
+    # this only when debugging outside the TUI (or with output redirected).
+    if debug:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        console_formatter = logging.Formatter('%(message)s')
+        console_handler.setFormatter(console_formatter)
+        root_logger.addHandler(console_handler)
+
     # 2. Error file handler - Only errors and above
     error_log = log_dir / "errors.log"
     error_handler = logging.FileHandler(error_log)
