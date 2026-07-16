@@ -1526,6 +1526,18 @@ class MeetingNotesApp(App):
             # Clear status back to idle after error
             self._write_status_file("idle")
     
+    # Editors that open their own window — launching these inside a new
+    # terminal just flashes an empty terminal at the user.
+    _GUI_EDITORS = {
+        "gnome-text-editor", "gedit", "kate", "kwrite", "xed", "pluma",
+        "mousepad", "code", "codium", "subl", "sublime_text", "zed",
+    }
+
+    @staticmethod
+    def _is_gui_editor(editor: str) -> bool:
+        """True if the configured editor is a known GUI application."""
+        return editor.split("/")[-1].split()[0] in MeetingNotesApp._GUI_EDITORS if editor.strip() else False
+
     def _open_in_new_terminal(self, editor: str, file_path: str) -> bool:
         """
         Open editor in a new terminal window.
@@ -1595,7 +1607,11 @@ class MeetingNotesApp(App):
             
             # Try to open in new terminal window
             try:
-                if self._open_in_new_terminal(editor, file_path):
+                if self._is_gui_editor(editor):
+                    # GUI editors open their own window — no terminal needed.
+                    subprocess.Popen([editor, file_path])
+                    self.notify(f"✓ Opened in {editor}", severity="information")
+                elif self._open_in_new_terminal(editor, file_path):
                     self.notify(f"✓ Opened in {editor}", severity="information")
                 else:
                     # Fallback: open in same terminal (will replace TUI temporarily)
@@ -1981,12 +1997,18 @@ class MeetingNotesApp(App):
     def action_edit_transcript(self, transcript_path: Path) -> None:
         """Open transcript in external editor."""
         editor = self.config.editor or os.environ.get('EDITOR', 'vim')
-        
+
         try:
+            if self._is_gui_editor(editor):
+                # GUI editors open their own window; suspending the TUI
+                # would just blank it while the editor runs detached.
+                subprocess.Popen([editor, str(transcript_path)])
+                self.notify(f"Opened: {transcript_path.name}")
+                return
             # Suspend the app to open editor
             with self.suspend():
                 subprocess.run([editor, str(transcript_path)])
-            
+
             self.notify(f"Edited: {transcript_path.name}")
         except Exception as e:
             logger.error(f"Error opening editor: {e}", exc_info=True)
