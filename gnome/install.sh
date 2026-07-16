@@ -50,7 +50,25 @@ gsettings set "$SCHEMA.custom-keybinding:$KEY_PATH" command "$LAUNCHER"
 gsettings set "$SCHEMA.custom-keybinding:$KEY_PATH" binding "<Control><Alt>m"
 echo "registered keybind: Ctrl+Alt+M -> $LAUNCHER"
 
-# 3. Autostart entry for the indicator --------------------------------------
+# 3. App entry (GNOME app grid / dash, pinnable) -----------------------------
+APP_DESKTOP="$HOME/.local/share/applications/meeting-notes.desktop"
+mkdir -p "$(dirname "$APP_DESKTOP")"
+cat > "$APP_DESKTOP" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Meeting Notes
+Comment=Record, transcribe and summarize meetings
+Exec=$LAUNCHER
+Icon=audio-input-microphone
+Terminal=false
+Categories=AudioVideo;Audio;Office;
+StartupWMClass=meeting-notes
+EOF
+chmod 0644 "$APP_DESKTOP"
+command -v update-desktop-database >/dev/null && update-desktop-database "$(dirname "$APP_DESKTOP")" || true
+echo "installed app entry: $APP_DESKTOP"
+
+# 4. Autostart entry for the indicator --------------------------------------
 mkdir -p "$(dirname "$AUTOSTART")"
 cat > "$AUTOSTART" <<EOF
 [Desktop Entry]
@@ -62,7 +80,7 @@ X-GNOME-Autostart-enabled=true
 EOF
 echo "installed autostart: $AUTOSTART"
 
-# 4. Start the indicator now (if not already running) ------------------------
+# 5. Start the indicator now (if not already running) ------------------------
 if ! pgrep -f "meeting-notes-indicator.py" >/dev/null; then
     nohup /usr/bin/python3 "$REPO/gnome/meeting-notes-indicator.py" >/dev/null 2>&1 &
     echo "started indicator (pid $!)"
