@@ -195,6 +195,24 @@ def test_transcribe_missing_file_raises(fake_faster_whisper, tmp_path):
         t.transcribe(str(tmp_path / "nope.wav"))
 
 
+def test_language_pin_passed_through(fake_faster_whisper, tmp_path):
+    """whisper_language pins decoding; empty string means auto (None).
+    Belt-and-suspenders with VAD against wrong-language transcription
+    (ported from omdenton's fork)."""
+    audio = tmp_path / "fake.wav"
+    audio.write_bytes(b"\x00\x00")
+
+    t = _transcriber_module().WhisperTranscriber("base", device="cpu", language="en")
+    t.transcribe(str(audio))
+    _, kwargs = t.model.transcribe_calls[0]
+    assert kwargs.get("language") == "en"
+
+    t2 = _transcriber_module().WhisperTranscriber("base", device="cpu", language="")
+    t2.transcribe(str(audio))
+    _, kwargs2 = t2.model.transcribe_calls[0]
+    assert kwargs2.get("language") is None
+
+
 def test_transcribe_uses_vad_filter(fake_faster_whisper, tmp_path):
     """VAD must be on: silence at meeting start otherwise poisons language
     detection (observed live: silent first 30s -> 'nn' -> hallucinated
@@ -207,5 +225,5 @@ def test_transcribe_uses_vad_filter(fake_faster_whisper, tmp_path):
 
     _, kwargs = t.model.transcribe_calls[0]
     assert kwargs.get("vad_filter") is True
-    # Language stays auto-detected (None) — VAD makes detection trustworthy.
-    assert kwargs.get("language") is None
+    # Default pins English (config whisper_language, "" = auto-detect).
+    assert kwargs.get("language") == "en"

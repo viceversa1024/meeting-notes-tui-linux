@@ -233,6 +233,35 @@ def test_missing_voices_dir_transcribes_without_references(cloud, tmp_path):
     assert "known_speaker_references" not in calls[0]
 
 
+def test_cloud_language_pin_passed_when_set(cloud, tmp_path):
+    audio = tmp_path / "m.wav"
+    _write_wav(audio)
+    calls = _install_fake_client(cloud, response=FakeApiResponse([]))
+
+    cloud.language = "en"
+    cloud.transcribe(str(audio))
+    assert calls[0]["language"] == "en"
+
+    cloud.language = ""
+    cloud.transcribe(str(audio))
+    assert "language" not in calls[1]
+
+
+def test_factory_passes_language_to_both(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from meeting_notes.transcriber import OpenAITranscriber, create_transcriber
+
+    cfg = AppConfig(
+        transcription_provider="openai",
+        openai_api_key="sk-test",
+        whisper_language="en",
+    )
+    t = create_transcriber(cfg)
+    assert isinstance(t, OpenAITranscriber)
+    assert t.language == "en"
+    assert t.fallback.language == "en"
+
+
 def test_factory_passes_voices_dir(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     from meeting_notes.transcriber import OpenAITranscriber, create_transcriber

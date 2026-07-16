@@ -62,7 +62,7 @@ def _looks_like_cuda_failure(err: BaseException) -> bool:
 class WhisperTranscriber:
     """Transcribe audio files using faster-whisper."""
 
-    def __init__(self, model_name: str = "base", device: str = "cpu"):
+    def __init__(self, model_name: str = "base", device: str = "cpu", language: str = "en"):
         """Initialize the transcriber.
 
         Args:
@@ -72,6 +72,10 @@ class WhisperTranscriber:
                 CPU pipeline and avoids broken CUDA installs taking the app
                 down. ``"auto"`` lets ctranslate2 pick (CUDA when available)
                 but still falls back to CPU on load failure.
+            language: Language code (e.g. ``"en"``) to pin decoding to;
+                empty string auto-detects. Belt-and-suspenders with VAD: a
+                quiet/noisy opening can still misdetect and mistranscribe
+                the whole meeting (ported from omdenton's fork).
         """
         if device not in _VALID_DEVICES:
             logger.warning(f"Unknown whisper device {device!r}, falling back to 'cpu'")
@@ -79,6 +83,7 @@ class WhisperTranscriber:
         logger.info(f"Initializing WhisperTranscriber (model: {model_name}, device: {device})")
         self.model_name = model_name
         self.requested_device = device
+        self.language = language
         self.active_device: Optional[str] = None
         self.model = None  # type: ignore[assignment]
 
@@ -147,7 +152,7 @@ class WhisperTranscriber:
         # "Thank you for watching" across the whole file.
         raw_segments, info = self.model.transcribe(
             str(audio_file),
-            language=None,
+            language=self.language or None,
             task="transcribe",
             vad_filter=True,
         )
@@ -222,11 +227,13 @@ class OpenAITranscriber:
         api_key: str,
         fallback: "WhisperTranscriber",
         voices_dir: str = "",
+        language: str = "en",
     ):
         logger.info("Initializing OpenAITranscriber (cloud, diarized)")
         self.api_key = api_key
         self.fallback = fallback
         self.voices_dir = voices_dir
+        self.language = language
         self._client = None
 
     @staticmethod
@@ -333,12 +340,14 @@ class OpenAITranscriber:
                 logger.info(
                     f"Cloud transcription: uploading {size / 1e6:.1f} MB to {self._MODEL}..."
                 )
+                lang_kwargs = {"language": self.language} if self.language else {}
                 with open(upload, "rb") as f:
                     resp = self._get_client().audio.transcriptions.create(
                         file=f,
                         model=self._MODEL,
                         response_format="diarized_json",
                         chunking_strategy="auto",
+                        **lang_kwargs,
                         **self._speaker_kwargs(),
                     )
 
@@ -389,15 +398,22 @@ def create_transcriber(config):
             return OpenAITranscriber(
                 api_key=api_key,
                 fallback=WhisperTranscriber(
-                    config.whisper_model, device=config.whisper_device
+                    config.whisper_model,
+                    device=config.whisper_device,
+                    language=config.whisper_language,
                 ),
                 voices_dir=config.voices_dir,
+                language=config.whisper_language,
             )
         logger.warning(
             "transcription_provider is 'openai' but no OpenAI API key is "
             "configured — using local transcription"
         )
-    return WhisperTranscriber(config.whisper_model, device=config.whisper_device)
+    return WhisperTranscriber(
+        config.whisper_model,
+        device=config.whisper_device,
+        language=config.whisper_language,
+    )
 
 
 if __name__ == "__main__":

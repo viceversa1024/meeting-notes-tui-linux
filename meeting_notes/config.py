@@ -33,6 +33,10 @@ class AppConfig:
     # README's privacy-first CPU pipeline and dodges broken CUDA setups
     # (missing cuDNN, "no kernel image is available", ...).
     whisper_device: str = "cpu"
+    # Language code to pin transcription to (e.g. "en"); empty string =
+    # auto-detect. Auto-detection can misfire on a quiet/noisy opening and
+    # mistranscribe the whole meeting in the wrong language.
+    whisper_language: str = "en"
     # "local" (faster-whisper, default) or "openai" (cloud
     # gpt-4o-transcribe-diarize with speaker labels; needs the OpenAI key;
     # falls back to local automatically on any failure).
