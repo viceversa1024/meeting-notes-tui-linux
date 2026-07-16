@@ -172,6 +172,7 @@ def test_transcribe_builds_result_from_segments(fake_faster_whisper, tmp_path):
     assert result.segments[1].end == 5.0
     assert result.language == "en"
     assert result.duration == 5.0
+    assert result.model == "faster-whisper base"
 
 
 def test_transcribe_empty_audio_gives_empty_result(fake_faster_whisper, tmp_path):

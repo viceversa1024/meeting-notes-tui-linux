@@ -1487,11 +1487,10 @@ class MeetingNotesApp(App):
             self.call_from_thread(self.notify, f"✓ Transcribed {word_count} words. Generating AI summary...", severity="information")
             
             # Format transcript
-            formatted = '\n\n'.join([
-                f'**[{int(seg.start // 60):02d}:{int(seg.start % 60):02d}]** {seg.text.strip()}'
-                for seg in result.segments
-            ])
-            
+            # Transcriber's own formatter keeps speaker labels (cloud
+            # diarization) — hand-rolling the format here dropped them.
+            formatted = self.transcriber.format_transcript_with_timestamps(result)
+
             # Generate note with AI summary (pass custom title if provided)
             logger.info("Creating note with AI summary")
             duration = result.segments[-1].end if result.segments else 0
@@ -1500,7 +1499,11 @@ class MeetingNotesApp(App):
                 formatted_transcript=formatted,
                 duration=duration,
                 title=meeting_title,
-                user_notes=user_notes
+                user_notes=user_notes,
+                metadata={
+                    "recording_file": Path(audio_path).name,
+                    "transcription_model": result.model,
+                }
             )
             
             # Update UI

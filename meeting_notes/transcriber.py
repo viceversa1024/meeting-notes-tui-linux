@@ -32,6 +32,9 @@ class TranscriptResult:
     segments: list[TranscriptSegment]
     language: str
     duration: float
+    # Which backend/model actually produced this result (a cloud request
+    # that fell back to local reports the local model).
+    model: str = ""
 
 
 _VALID_DEVICES = ("auto", "cpu", "cuda")
@@ -175,6 +178,7 @@ class WhisperTranscriber:
             segments=segments,
             language=getattr(info, "language", None) or "unknown",
             duration=duration,
+            model=f"faster-whisper {self.model_name}",
         )
 
     def format_transcript_with_timestamps(self, result: TranscriptResult) -> str:
@@ -370,6 +374,7 @@ class OpenAITranscriber:
                 segments=segments,
                 language=getattr(resp, "language", None) or "unknown",
                 duration=duration,
+                model=self._MODEL,
             )
         except Exception as exc:  # noqa: BLE001 - fallback must catch everything
             logger.warning(

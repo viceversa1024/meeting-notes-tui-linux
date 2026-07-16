@@ -105,6 +105,7 @@ def test_diarized_segments_map_to_result(cloud, tmp_path):
     assert result.segments[0].start == 0.0
     assert result.duration == 3.5
     assert result.language == "en"
+    assert result.model == "gpt-4o-transcribe-diarize"
     # API called with the documented contract
     assert calls[0]["model"] == "gpt-4o-transcribe-diarize"
     assert calls[0]["response_format"] == "diarized_json"

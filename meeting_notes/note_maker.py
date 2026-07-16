@@ -59,6 +59,7 @@ class NoteMaker:
         self.transcripts_dir.mkdir(parents=True, exist_ok=True)
         self.ai_provider = ai_provider
         self.summarizer: Optional[Any] = None
+        self.model_label = ""  # human-readable summarizer model name
         
         if ai_provider in ["openai", "anthropic", "openrouter"]:
             if not CLOUD_AVAILABLE:
@@ -71,14 +72,17 @@ class NoteMaker:
                     if ai_provider == "openai":
                         self.summarizer = OpenAISummarizer(api_key=api_key, model=ai_model)
                         model_name = OpenAISummarizer.MODELS[ai_model]["name"]
+                        self.model_label = model_name
                         logger.info(f"AI summarization enabled (OpenAI: {model_name})")
                     elif ai_provider == "anthropic":
                         self.summarizer = AnthropicSummarizer(api_key=api_key, model=ai_model)
                         model_name = AnthropicSummarizer.MODELS[ai_model]["name"]
+                        self.model_label = model_name
                         logger.info(f"AI summarization enabled (Anthropic: {model_name})")
                     elif ai_provider == "openrouter":
                         self.summarizer = OpenRouterSummarizer(api_key=api_key, model=ai_model)
                         model_name = OpenRouterSummarizer.MODELS[ai_model]["name"]
+                        self.model_label = model_name
                         logger.info(f"AI summarization enabled (OpenRouter: {model_name})")
                         
                 except Exception as e:
@@ -95,6 +99,7 @@ class NoteMaker:
                     # Defensive fallback: empty model name reaches
                     # `ollama run "" <prompt>` and errors with "model is required".
                     self.summarizer = OllamaSummarizer(model=ai_model or "llama3.2:3b")
+                    self.model_label = f"Ollama {ai_model or 'llama3.2:3b'}"
                     logger.info(f"AI summarization enabled (Local Ollama: {ai_model})")
                 except Exception as e:
                     logger.error(f"Could not initialize Ollama: {e}", exc_info=True)
@@ -180,6 +185,9 @@ class NoteMaker:
         # Create note file (markdown, summary only)
         note_filename = f"{filename_base}.md"
         note_path = self.output_dir / note_filename
+        participants = self._guess_participants(
+            formatted_transcript, summary.get('ai_summary')
+        )
         note_content = self._generate_note_file(
             title=title,
             date=now,
@@ -188,7 +196,8 @@ class NoteMaker:
             transcript_filename=transcript_filename,
             recording_file=recording_file,
             metadata=metadata or {},
-            user_notes=user_notes
+            user_notes=user_notes,
+            participants=participants
         )
         note_path.write_text(note_content)
         logger.info(f"Note saved: {note_path}")
@@ -279,6 +288,26 @@ Recording: {recording_file}
 """
         return content
     
+    @staticmethod
+    def _guess_participants(formatted_transcript: str, ai_summary: Any = None) -> list:
+        """Best-guess participant names.
+
+        Named (non-letter) transcript speakers are high confidence — they
+        come from voice tags. The AI summary's participant list fills in
+        people who were mentioned but not voice-tagged; placeholder junk
+        (bracketed text, "unable to identify") is dropped.
+        """
+        names = []
+        for m in re.finditer(r"\*\*\[[\d:]+\] ([^:*]+):\*\*", formatted_transcript):
+            name = m.group(1).strip()
+            if len(name) > 1 and name not in names:
+                names.append(name)
+        for p in (getattr(ai_summary, "participants", None) or []):
+            p = p.strip()
+            if p and len(p) > 1 and "[" not in p and "unable" not in p.lower() and p not in names:
+                names.append(p)
+        return names
+
     def _generate_note_file(
         self,
         title: str,
@@ -288,13 +317,27 @@ Recording: {recording_file}
         transcript_filename: str,
         recording_file: str,
         metadata: dict,
-        user_notes: str = ""
+        user_notes: str = "",
+        participants: Optional[list] = None
     ) -> str:
         """Generate markdown note file (summary only, no transcript)."""
-        
+        import json
+
         duration_str = self._format_duration(duration)
         date_str = date.strftime("%B %d, %Y at %I:%M %p")
-        
+
+        # Optional provenance lines — only present when known, so the
+        # Obsidian properties panel stays free of empty fields.
+        extra_lines = []
+        if participants:
+            extra_lines.append(f"participants: {json.dumps(participants)}")
+        transcription_model = metadata.get("transcription_model", "")
+        if transcription_model:
+            extra_lines.append(f'transcription_model: "{transcription_model}"')
+        if self.model_label:
+            extra_lines.append(f'summary_model: "{self.model_label}"')
+        extra = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
+
         # Build frontmatter with transcript reference
         frontmatter = f"""---
 title: "{title}"
@@ -302,7 +345,7 @@ date: {date.strftime("%Y-%m-%d")}
 time: "{date.strftime("%H:%M")}"
 duration_seconds: {int(duration)}
 word_count: {summary['word_count']}
-tags: [meeting, auto-generated]
+tags: [meeting, auto-generated]{extra}
 recording_file: "{recording_file}"
 transcript_file: "{transcript_filename}"
 ---
