@@ -416,8 +416,8 @@ class TranscriptViewer(ModalScreen):
             except Exception as e:
                 yield Static(f"[red]Error loading transcript:[/red] {e}", id="transcript-content")
             
-            yield Static("Press 'Esc' to close  |  Press 'e' to open in editor", id="transcript-footer")
-    
+            yield Static("Press 'Esc' to close  |  'e' to open in editor  |  'c' to copy", id="transcript-footer")
+
     def on_key(self, event) -> None:
         """Handle key events."""
         if event.key == "escape":
@@ -426,6 +426,13 @@ class TranscriptViewer(ModalScreen):
             self.dismiss()
             # Trigger edit action on parent app
             self.app.action_edit_transcript(self.transcript_path)
+        elif event.key == "c":
+            from meeting_notes.clipboard import copy_text_to_clipboard
+            try:
+                ok, msg = copy_text_to_clipboard(self.transcript_path.read_text())
+            except Exception as e:
+                ok, msg = False, f"Failed to copy: {e}"
+            self.app.notify(msg, severity="information" if ok else "error")
 
 
 class EditTitleScreen(ModalScreen[str]):
@@ -1626,42 +1633,12 @@ class MeetingNotesApp(App):
         """Copy selected note to clipboard."""
         viewer = self.query_one("#note-viewer", NoteViewer)
         if viewer.current_note:
+            from meeting_notes.clipboard import copy_text_to_clipboard
             try:
-                with open(viewer.current_note, 'r') as f:
-                    content = f.read()
-                
-                # Try clipboard tools in order: wl-copy (Wayland), xclip, xsel
-                import shutil
-                
-                if shutil.which('wl-copy'):
-                    # Wayland (Hyprland, Sway, etc.)
-                    process = subprocess.Popen(
-                        ['wl-copy'],
-                        stdin=subprocess.PIPE
-                    )
-                    process.communicate(content.encode())
-                    self.notify("✓ Copied to clipboard", severity="information")
-                elif shutil.which('xclip'):
-                    # X11 with xclip
-                    process = subprocess.Popen(
-                        ['xclip', '-selection', 'clipboard'],
-                        stdin=subprocess.PIPE
-                    )
-                    process.communicate(content.encode())
-                    self.notify("✓ Copied to clipboard", severity="information")
-                elif shutil.which('xsel'):
-                    # X11 with xsel
-                    process = subprocess.Popen(
-                        ['xsel', '--clipboard'],
-                        stdin=subprocess.PIPE
-                    )
-                    process.communicate(content.encode())
-                    self.notify("✓ Copied to clipboard", severity="information")
-                else:
-                    self.notify("Install wl-clipboard (Wayland) or xclip/xsel (X11)", severity="error")
-                    
+                ok, msg = copy_text_to_clipboard(viewer.current_note.read_text())
             except Exception as e:
-                self.notify(f"Failed to copy: {e}", severity="error")
+                ok, msg = False, f"Failed to copy: {e}"
+            self.notify(msg, severity="information" if ok else "error")
         else:
             self.notify("No note selected", severity="warning")
     
