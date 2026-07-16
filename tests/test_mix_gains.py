@@ -58,6 +58,25 @@ def test_measure_wav_peak_missing_file(tmp_path, recorder):
     assert recorder._measure_wav_peak(tmp_path / "missing.wav") == 0
 
 
+def test_measure_wav_peak_finds_audio_outside_probe_windows(tmp_path, recorder):
+    """Real-world clipping bug: a 72s recording whose speech never landed in
+    the start/middle/end probe seconds measured 4% peak when the true peak
+    was 38%. The 12x gain computed from that underestimate clipped the mix
+    at 0 dBFS. Peak measurement must cover the whole file."""
+    path = tmp_path / "burst.wav"
+    rate = 8000
+    # 10s file, loud burst only at seconds 2-3 — outside the first second,
+    # the middle second (~4.5-5.5) and the last second (9-10).
+    samples = (
+        _silence(2.0, rate=rate)
+        + _sine(1.0, amp=12000, rate=rate)
+        + _silence(7.0, rate=rate)
+    )
+    _write_wav(path, samples, rate=rate)
+    peak = recorder._measure_wav_peak(path)
+    assert 11500 <= peak <= 12000, f"expected ~12000, got {peak}"
+
+
 def test_mix_gains_balance_quiet_system_against_loud_mic(tmp_path, recorder):
     """The exact scenario James hit: mic peak ~15%, system peak ~1%."""
     mic = tmp_path / "mic.wav"

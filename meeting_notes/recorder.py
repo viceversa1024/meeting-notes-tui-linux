@@ -1119,38 +1119,37 @@ class AudioRecorder:
             )
 
     def _measure_wav_peak(self, path: Path) -> int:
-        """Cheap peak-amplitude measurement (0..32767) for an s16 WAV.
+        """Peak-amplitude measurement (0..32767) for an s16 WAV.
 
-        Samples up to 3 one-second windows from the start, middle, and end —
-        same shape as ``_is_wav_effectively_silent`` — so we don't have to
-        read a multi-hundred-MB file just to compute a mix gain.
+        Scans the WHOLE file in chunks. We used to probe just three
+        one-second windows (start/middle/end), but any recording whose
+        loud passages fell outside those probes measured near-silent,
+        got the max 12x mix gain, and clipped hard at 0 dBFS. A full
+        sequential scan via audioop is well under a second even for an
+        hour-long 48kHz WAV — cheap next to the ffmpeg mix that follows.
         """
         import wave
+
+        try:
+            import audioop  # type: ignore[import]
+        except Exception:
+            audioop = None
 
         try:
             with wave.open(str(path), "rb") as wf:
                 if wf.getsampwidth() != 2:
                     return 0
                 rate = wf.getframerate()
-                n_frames = wf.getnframes()
-                if rate == 0 or n_frames == 0:
+                if rate == 0 or wf.getnframes() == 0:
                     return 0
-                frames_per_probe = rate
-                offsets = [0]
-                if n_frames > frames_per_probe * 3:
-                    offsets.append(max((n_frames // 2) - (frames_per_probe // 2), 0))
-                    offsets.append(max(n_frames - frames_per_probe, 0))
                 peak = 0
-                for off in offsets:
-                    wf.setpos(off)
-                    raw = wf.readframes(frames_per_probe)
+                while True:
+                    raw = wf.readframes(rate)
                     if not raw:
-                        continue
-                    try:
-                        import audioop  # type: ignore[import]
-
+                        break
+                    if audioop is not None:
                         p = audioop.max(raw, 2)
-                    except Exception:
+                    else:
                         import struct
                         n = (len(raw) // 2) * 2
                         samples = struct.unpack(f"<{n // 2}h", raw[:n])
@@ -1163,7 +1162,7 @@ class AudioRecorder:
                                 p = v
                     if p > peak:
                         peak = p
-                return peak
+                return min(peak, 32767)
         except Exception as exc:  # noqa: BLE001
             logger.debug(f"_measure_wav_peak({path}) failed: {exc}")
             return 0
