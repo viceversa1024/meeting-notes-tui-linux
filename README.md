@@ -7,12 +7,15 @@ A local, privacy-focused AI meeting notetaker for Linux with a keyboard-driven T
 - **Keyboard-driven TUI** - Lazygit-inspired interface, no mouse required
 - **Audio recording** - Mic + system audio (PipeWire/PulseAudio)
 - **Local transcription** - faster-whisper (CPU-based, privacy-first; ~4x faster than openai-whisper, no torch)
+- **Cloud transcription (opt-in)** - OpenAI diarized transcription: much faster than CPU, labels speakers, falls back to local automatically
+- **Voice tags** - a library of short reference clips so cloud transcripts label speakers by *name*
 - **AI summaries** - Cloud AI (OpenAI, Anthropic, OpenRouter) or local (Ollama)
 - **User notes** - Write your own notes during recording to provide context to AI
-- **Markdown notes** - Full transcripts with timestamps
+- **Markdown notes** - Full transcripts with timestamps, provenance frontmatter (participants, models used)
+- **Obsidian export** - copy each summary note into a vault folder automatically
 - **Note management** - Edit titles, manage tags, search, delete
 - **Settings UI** - Configure AI providers, API keys, models, paths
-- **Integrations** - Editor, file manager, clipboard, Waybar status
+- **Integrations** - Editor, file manager, clipboard, Waybar status, GNOME (indicator, keybind, launcher)
 
 ## Quick Start
 
@@ -185,14 +188,58 @@ python run.py --dev
 - `s` - Stop and process
 - `x` - Cancel
 
+**Transcript viewer** (`t`):
+- `e` - Open in editor
+- `c` - Copy transcript to clipboard
+- `Esc` - Close
+
 ### Settings
 
 Press `,` to configure:
-- AI provider (OpenAI, Anthropic, OpenRouter, Ollama, none)
-- API keys
-- Whisper model (tiny/base/small/medium/large)
+- AI provider (OpenAI, Anthropic, OpenRouter, Ollama, none) and API keys
+- Transcription: local vs OpenAI cloud, whisper model (tiny/base/small/medium/large), language pin
+- Obsidian: vault export folder + export status
+- Voice Tags: library folder + which tags are active
 - Recording mode (mic/system/combined)
 - Directories and editor
+
+## Cloud Transcription (optional)
+
+Set `transcription_provider: openai` (or toggle it in settings) to
+transcribe with OpenAI's `gpt-4o-transcribe-diarize` instead of local
+whisper. You get results in minutes instead of CPU-bound tens of minutes,
+plus per-speaker labels. Audio is compressed to ~2 MB/17min Opus before
+upload; **any** failure (offline, API error, oversized file) falls back to
+the local pipeline automatically, so a meeting is never lost. Uses the
+same OpenAI API key as summaries. Note the privacy trade-off: your meeting
+audio goes to OpenAI. Keep `transcription_provider: local` (the default)
+for the fully-private pipeline.
+
+### Voice tags: name the speakers
+
+Drop a 1.2–10s clip of someone's voice into the voice library
+(`~/.config/meeting-notes/voices/` by default), named `Person.wav` — the 4
+most recently modified clips ride along with each cloud transcription and
+matching segments come back as `**[04:12] Person:** ...` instead of
+`A:`/`B:`. You never need to cut audio by hand: after any meeting where a
+new person shows up as a letter label,
+
+```bash
+python -m meeting_notes.voice_tag transcripts/<file>.txt A "Their Name" --recording recordings/<file>.wav
+```
+
+picks their longest utterance, cuts a clip, and files it in the library.
+Verify the label really is that person first (diarization sometimes splits
+one voice across labels).
+
+## Obsidian Export (optional)
+
+Set `obsidian_dir` (or settings → Obsidian) to a folder inside your vault,
+e.g. `~/Documents/Obsidian Vault/meetings`. Each meeting's summary note
+(markdown only — transcripts and recordings stay out of the vault) is
+copied there after saving. Notes carry Obsidian-friendly frontmatter:
+participants (best guess), transcription model, summary model, tags. A
+missing or unwritable vault never blocks note creation.
 
 ## Output Format
 
@@ -206,6 +253,11 @@ time: "14:04"
 duration_seconds: 179
 word_count: 419
 tags: [meeting, auto-generated, ai-summary]
+participants: ["Dana", "Sam"]
+transcription_model: "gpt-4o-transcribe-diarize"
+summary_model: "GPT-5.6 Sol"
+recording_file: "2026-01-15-140400.wav"
+transcript_file: "2026-01-15-140400-website-redesign-discussion.txt"
 ---
 
 # Website Redesign Discussion
@@ -258,6 +310,23 @@ visualize that...
 
 **[00:12]** with what we look like, I'll share my screen right now...
 ```
+
+## GNOME Integration
+
+```bash
+gnome/install.sh
+```
+
+Idempotent installer that sets up:
+- **Launcher** `~/.local/bin/meeting-notes` — opens the TUI in a kitty
+  window (single-instance: notifies instead of double-launching)
+- **Keybind** Ctrl+Alt+M
+- **App entry** — "Meeting Notes" in the app grid; right-click → *Pin to
+  Dash* for the sidebar
+- **Top-bar indicator** with recording status (autostarts on login)
+
+Requires kitty and GNOME (gsettings). Safe to re-run after moving the
+repo or changing the keybind.
 
 ## Hyprland/Waybar Integration
 
