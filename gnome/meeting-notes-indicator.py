@@ -122,11 +122,16 @@ def main() -> int:
     indicator.set_menu(menu)
 
     def refresh() -> bool:
-        state, label, title = resolve_state(app_running(), read_status(status_path))
-        indicator.set_icon_full(ICONS[state], title)
-        # Guide width "88:88" stops the bar jittering as digits change.
-        indicator.set_label(label, "88:88")
-        indicator.set_title(title)
+        # Never let an exception escape: GLib removes a timeout whose
+        # callback raises, which would silently freeze the indicator.
+        try:
+            state, label, title = resolve_state(app_running(), read_status(status_path))
+            indicator.set_icon_full(ICONS[state], title)
+            # Guide width "88:88" stops the bar jittering as digits change.
+            indicator.set_label(label, "88:88")
+            indicator.set_title(title)
+        except Exception:
+            pass
         return True  # keep the GLib timer alive
 
     refresh()
