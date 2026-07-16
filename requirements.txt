@@ -1,7 +1,7 @@
 # Pinned dev install (everything). For packaging/optional extras see pyproject.toml.
 # Core
 textual>=0.50.0
-openai-whisper>=20231117
+faster-whisper>=1.0.0
 pyyaml>=6.0
 
 # Cloud AI providers (optional in pyproject.toml, required here for the bundled setup scripts)

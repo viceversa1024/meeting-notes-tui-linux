@@ -6,7 +6,7 @@ A local, privacy-focused AI meeting notetaker for Linux with a keyboard-driven T
 
 - **Keyboard-driven TUI** - Lazygit-inspired interface, no mouse required
 - **Audio recording** - Mic + system audio (PipeWire/PulseAudio)
-- **Local transcription** - OpenAI Whisper (CPU-based, privacy-first)
+- **Local transcription** - faster-whisper (CPU-based, privacy-first; ~4x faster than openai-whisper, no torch)
 - **AI summaries** - Cloud AI (OpenAI, Anthropic, OpenRouter) or local (Ollama)
 - **User notes** - Write your own notes during recording to provide context to AI
 - **Markdown notes** - Full transcripts with timestamps
@@ -62,7 +62,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**Note:** The first time you run transcription, Whisper will download the `base` model (~140MB).
+**Note:** The first time you run transcription, faster-whisper will download the `base` model (~140MB) from Hugging Face into `~/.cache/huggingface/`.
 
 #### 3. Set Up AI Summarization
 
@@ -344,10 +344,11 @@ Devices are stored by name (not numeric index), so they survive reboots.
 
 **Whisper compute device:**
 - `cpu` (default) — safe everywhere; matches the privacy-first claim above.
-- `cuda` — uses your GPU; requires a working `torch` + CUDA install. If
-  loading fails (e.g. *"no kernel image is available for execution on the
-  device"*), the app automatically falls back to CPU and logs a warning.
-- `auto` — let `torch` pick.
+- `cuda` — uses your GPU; requires the CUDA libraries (cuBLAS + cuDNN) that
+  ctranslate2 needs. If loading fails (e.g. missing cuDNN or *"no kernel
+  image is available"*), the app automatically falls back to CPU and logs a
+  warning.
+- `auto` — let ctranslate2 pick.
 
 **Live mic level meter:**
 While recording, the recording view shows a real-time peak meter for the
@@ -448,7 +449,7 @@ This is a personal project but suggestions and contributions are welcome!
 ### Running tests
 
 ```bash
-# Lightweight tests (matches CI — no whisper/torch needed)
+# Lightweight tests (matches CI — no faster-whisper/ctranslate2 needed)
 pip install pytest pytest-asyncio ruff openai anthropic openrouter pyyaml
 pytest tests/test_config.py tests/test_paths_and_fallbacks.py \
        tests/test_recording_retention.py tests/test_summarizers.py

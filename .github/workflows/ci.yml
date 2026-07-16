@@ -26,8 +26,8 @@ jobs:
           cache: pip
 
       - name: Install lightweight test deps
-        # Deliberately avoiding the [all] extra: that pulls openai-whisper
-        # which transitively installs torch (~1GB) and explodes CI time.
+        # Deliberately avoiding the [all] extra: that pulls faster-whisper
+        # which installs ctranslate2/onnxruntime and slows CI down.
         # The fast tests (config, paths, retention, summarizers) only need
         # the cloud SDK clients + pyyaml + the dev tools. The Textual smoke
         # tests are kept locally only — see tests/test_textual_smoke.py and
@@ -49,10 +49,10 @@ jobs:
       - name: Test (pytest, fast tests only)
         # Explicitly listing the test files keeps CI green even if someone
         # later adds a new test file with heavy dependencies.
-        # The new audio/transcriber tests deliberately avoid importing torch
-        # (transcriber.py imports whisper lazily inside load_model, and the
-        # tests inject a fake whisper module via sys.modules), so they're
-        # safe to run on the lightweight CI image.
+        # The audio/transcriber tests deliberately avoid importing
+        # ctranslate2 (transcriber.py imports faster_whisper lazily inside
+        # load_model, and the tests inject a fake faster_whisper module via
+        # sys.modules), so they're safe to run on the lightweight CI image.
         run: |
           pytest -v \
             tests/test_config.py \
@@ -62,6 +62,9 @@ jobs:
             tests/test_recorder_commands.py \
             tests/test_device_enumeration.py \
             tests/test_transcriber_device.py \
+            tests/test_cloud_transcriber.py \
+            tests/test_voice_tag.py \
+            tests/test_obsidian_export.py \
             tests/test_level_meter.py \
             tests/test_audio_test.py \
             tests/test_mix_gains.py \

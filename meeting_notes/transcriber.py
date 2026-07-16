@@ -1,12 +1,10 @@
-"""Transcription module using OpenAI Whisper.
+"""Transcription module using faster-whisper (CTranslate2).
 
-Whisper auto-picks ``cuda`` when ``torch.cuda.is_available()`` reports True,
-which can fail loudly on machines whose installed PyTorch wheel doesn't ship
-kernels for the local GPU (the classic ``CUDA error: no kernel image is
-available for execution on the device``). We default to CPU to match the
-README's "CPU-based, privacy-first" promise, allow opt-in CUDA via config,
-and transparently fall back to CPU if the chosen device can't actually load
-the model.
+faster-whisper runs Whisper models ~4x faster than openai-whisper on CPU
+with int8 quantization, and needs no PyTorch at all. We default to CPU to
+match the README's "CPU-based, privacy-first" promise, allow opt-in CUDA via
+config, and transparently fall back to CPU if the chosen device can't
+actually load the model (missing cuDNN/cuBLAS, no kernel image, etc.).
 """
 
 from pathlib import Path
@@ -24,6 +22,7 @@ class TranscriptSegment:
     start: float
     end: float
     text: str
+    speaker: Optional[str] = None
 
 
 @dataclass
@@ -37,6 +36,10 @@ class TranscriptResult:
 
 _VALID_DEVICES = ("auto", "cpu", "cuda")
 
+# compute type per device: int8 is the fast CPU path with near-fp32 quality;
+# float16 is the standard CUDA path. "auto" lets ctranslate2 decide.
+_COMPUTE_TYPES = {"cpu": "int8", "cuda": "float16", "auto": "auto"}
+
 
 def _looks_like_cuda_failure(err: BaseException) -> bool:
     """Heuristic: does this exception indicate the CUDA path is unusable?"""
@@ -45,15 +48,19 @@ def _looks_like_cuda_failure(err: BaseException) -> bool:
         "no kernel image is available",
         "CUDA error",
         "CUDA driver",
-        "Torch not compiled with CUDA",
         "cudaError",
         "device-side assert",
+        # ctranslate2 raises these when the CUDA libraries are missing/broken
+        "cudnn",
+        "cublas",
+        "CUDA is not available",
+        "no CUDA device",
     )
     return any(n.lower() in msg.lower() for n in needles)
 
 
 class WhisperTranscriber:
-    """Transcribe audio files using Whisper."""
+    """Transcribe audio files using faster-whisper."""
 
     def __init__(self, model_name: str = "base", device: str = "cpu"):
         """Initialize the transcriber.
@@ -63,8 +70,8 @@ class WhisperTranscriber:
             device: One of ``"cpu"``, ``"cuda"``, or ``"auto"``. Defaults to
                 ``"cpu"`` because that matches the documented privacy-first
                 CPU pipeline and avoids broken CUDA installs taking the app
-                down. ``"auto"`` lets Whisper pick (CUDA when available) but
-                still falls back to CPU on load failure.
+                down. ``"auto"`` lets ctranslate2 pick (CUDA when available)
+                but still falls back to CPU on load failure.
         """
         if device not in _VALID_DEVICES:
             logger.warning(f"Unknown whisper device {device!r}, falling back to 'cpu'")
@@ -75,46 +82,38 @@ class WhisperTranscriber:
         self.active_device: Optional[str] = None
         self.model = None  # type: ignore[assignment]
 
-    def _resolve_device(self) -> Optional[str]:
-        """Translate the requested device into something to pass to Whisper.
+    def _load_on(self, device: str):
+        from faster_whisper import WhisperModel  # noqa: WPS433 (lazy import)
 
-        Returns ``None`` for ``auto`` so Whisper does its own detection.
-        """
-        if self.requested_device == "auto":
-            return None
-        return self.requested_device
+        return WhisperModel(
+            self.model_name,
+            device=device,
+            compute_type=_COMPUTE_TYPES[device],
+        )
 
     def load_model(self):
         """Load the Whisper model (lazy loading), with CUDA-failure fallback."""
         if self.model is not None:
             return
 
-        # Import lazily so unit tests / non-transcription code paths don't
-        # need the whisper/torch wheels installed.
-        import whisper  # noqa: WPS433 (intentional local import)
-
-        target = self._resolve_device()
+        target = self.requested_device
         try:
-            logger.info(
-                f"Loading Whisper {self.model_name} model "
-                f"(device={target or 'auto'})..."
-            )
-            self.model = whisper.load_model(self.model_name, device=target)
-            # whisper exposes .device on the model after load
-            self.active_device = str(getattr(self.model, "device", target or "auto"))
+            logger.info(f"Loading Whisper {self.model_name} model (device={target})...")
+            self.model = self._load_on(target)
+            # ctranslate2 exposes the resolved device for "auto"
+            self.active_device = str(getattr(self.model, "device", target))
             logger.info(f"Whisper model loaded successfully on {self.active_device}")
             return
-        except Exception as exc:  # noqa: BLE001 - we want to handle anything torch throws
+        except Exception as exc:  # noqa: BLE001 - handle anything ctranslate2 throws
             if target == "cpu" or not _looks_like_cuda_failure(exc):
                 logger.error(f"Whisper model load failed: {exc}", exc_info=True)
                 raise
 
             logger.warning(
-                f"Whisper failed to load on {target or 'auto'} ({exc}). "
-                "Falling back to CPU."
+                f"Whisper failed to load on {target} ({exc}). Falling back to CPU."
             )
             try:
-                self.model = whisper.load_model(self.model_name, device="cpu")
+                self.model = self._load_on("cpu")
                 self.active_device = "cpu"
                 logger.info("Whisper model loaded successfully on cpu (after CUDA failure)")
             except Exception as cpu_exc:
@@ -142,48 +141,46 @@ class WhisperTranscriber:
             logger.error("Model not loaded")
             raise RuntimeError("Model not loaded")
 
-        # fp16 only makes sense on CUDA. Forcing fp16=False on CPU avoids
-        # noisy "FP16 is not supported on CPU; using FP32 instead" warnings
-        # and a small perf hit from Whisper trying anyway.
-        use_fp16 = self.active_device is not None and self.active_device.startswith("cuda")
-
-        result = self.model.transcribe(
+        # vad_filter strips non-speech before language detection and
+        # decoding. Without it, a silent meeting start poisons language
+        # detection (first 30s window) and Whisper hallucinates filler like
+        # "Thank you for watching" across the whole file.
+        raw_segments, info = self.model.transcribe(
             str(audio_file),
             language=None,
             task="transcribe",
-            verbose=False,
-            fp16=use_fp16,
+            vad_filter=True,
         )
 
+        # faster-whisper returns a generator; decoding happens as we iterate.
         segments = [
-            TranscriptSegment(
-                start=seg["start"],
-                end=seg["end"],
-                text=seg["text"].strip(),
-            )
-            for seg in result["segments"]
+            TranscriptSegment(start=seg.start, end=seg.end, text=seg.text.strip())
+            for seg in raw_segments
         ]
 
         duration = segments[-1].end if segments else 0.0
 
         logger.info(
             f"Transcription complete: {len(segments)} segments, "
-            f"{duration:.1f}s duration, language: {result.get('language', 'unknown')}"
+            f"{duration:.1f}s duration, language: {info.language}"
         )
 
         return TranscriptResult(
-            text=result["text"].strip(),
+            text=" ".join(s.text for s in segments if s.text),
             segments=segments,
-            language=result.get("language", "unknown"),
+            language=getattr(info, "language", None) or "unknown",
             duration=duration,
         )
 
     def format_transcript_with_timestamps(self, result: TranscriptResult) -> str:
-        """Format transcript with timestamps for each segment."""
+        """Format transcript with timestamps (and speakers, when known)."""
         lines = []
         for seg in result.segments:
             timestamp = self._format_timestamp(seg.start)
-            lines.append(f"**[{timestamp}]** {seg.text}")
+            if seg.speaker:
+                lines.append(f"**[{timestamp}] {seg.speaker}:** {seg.text}")
+            else:
+                lines.append(f"**[{timestamp}]** {seg.text}")
         return "\n\n".join(lines)
 
     @staticmethod
@@ -196,6 +193,211 @@ class WhisperTranscriber:
         if hours > 0:
             return f"{hours:02d}:{minutes:02d}:{secs:02d}"
         return f"{minutes:02d}:{secs:02d}"
+
+
+class OpenAITranscriber:
+    """Cloud transcription via OpenAI ``gpt-4o-transcribe-diarize``.
+
+    Same public surface as WhisperTranscriber; segments carry speaker
+    labels. Compression (mono 16 kbps Opus/WebM) keeps uploads far under
+    the API's 25 MB cap. Any failure — ffmpeg, upload, API, parsing —
+    falls back to the local WhisperTranscriber so a meeting is never lost
+    to a network problem.
+    """
+
+    _MODEL = "gpt-4o-transcribe-diarize"
+    _MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+    # API cap on known_speaker_references
+    _MAX_KNOWN_SPEAKERS = 4
+    _VOICE_MIMES = {
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".m4a": "audio/mp4",
+        ".webm": "audio/webm",
+    }
+
+    def __init__(
+        self,
+        api_key: str,
+        fallback: "WhisperTranscriber",
+        voices_dir: str = "",
+    ):
+        logger.info("Initializing OpenAITranscriber (cloud, diarized)")
+        self.api_key = api_key
+        self.fallback = fallback
+        self.voices_dir = voices_dir
+        self._client = None
+
+    @staticmethod
+    def _clip_duration_ok(clip: Path) -> bool:
+        """API accepts 1.2-10.0s references; one bad clip 400s the whole
+        request, so out-of-range .wav clips are skipped up front."""
+        if clip.suffix.lower() != ".wav":
+            return True  # can't check cheaply; let the API judge
+        import wave
+
+        try:
+            with wave.open(str(clip), "rb") as w:
+                seconds = w.getnframes() / w.getframerate()
+        except Exception:  # noqa: BLE001 - non-PCM wav etc.; let the API judge
+            return True
+        if 1.2 <= seconds <= 10.0:
+            return True
+        logger.warning(
+            f"voice tag {clip.name} is {seconds:.1f}s (API needs 1.2-10.0s) — skipped"
+        )
+        return False
+
+    def _speaker_kwargs(self) -> dict:
+        """known-speaker params from the voice library, {} if unusable.
+
+        Sends the 4 most recently modified clips (API cap) so recently
+        tagged people stay resolvable. Never fails the transcription.
+        """
+        if not self.voices_dir:
+            return {}
+        lib = Path(self.voices_dir).expanduser()
+        if not lib.is_dir():
+            return {}
+
+        clips = sorted(
+            (p for p in lib.iterdir() if p.suffix.lower() in self._VOICE_MIMES),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )[: self._MAX_KNOWN_SPEAKERS]
+
+        import base64
+
+        names, refs = [], []
+        for clip in clips:
+            if not self._clip_duration_ok(clip):
+                continue
+            try:
+                data = base64.b64encode(clip.read_bytes()).decode("ascii")
+            except OSError as exc:
+                logger.warning(f"voice tag {clip} unreadable ({exc}) — skipped")
+                continue
+            names.append(clip.stem)
+            refs.append(f"data:{self._VOICE_MIMES[clip.suffix.lower()]};base64,{data}")
+
+        if not names:
+            return {}
+        logger.info(f"Cloud transcription: sending voice tags for {names}")
+        return {"known_speaker_names": names, "known_speaker_references": refs}
+
+    def load_model(self):
+        """No-op: kept for interface parity with WhisperTranscriber."""
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import OpenAI  # noqa: WPS433 (lazy import)
+            self._client = OpenAI(api_key=self.api_key)
+        return self._client
+
+    def _compress(self, src: str, dst_dir: str) -> str:
+        """Compress to mono 16 kbps Opus in WebM (an API-supported container)."""
+        import subprocess
+
+        dst = str(Path(dst_dir) / (Path(src).stem + ".webm"))
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", src,
+             "-ac", "1", "-c:a", "libopus", "-b:a", "16k", dst],
+            check=True, capture_output=True,
+        )
+        return dst
+
+    def transcribe(
+        self,
+        audio_path: str,
+        progress_callback: Optional[Callable[[float], None]] = None,
+    ) -> TranscriptResult:
+        """Transcribe in the cloud; fall back to local on any failure."""
+        audio_file = Path(audio_path)
+        if not audio_file.exists():
+            logger.error(f"Audio file not found: {audio_file}")
+            raise FileNotFoundError(f"Audio file not found: {audio_file}")
+
+        import tempfile
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="meeting-notes-cloud-") as tmp:
+                logger.info(f"Cloud transcription: compressing {audio_file.name}...")
+                upload = Path(self._compress(str(audio_file), tmp))
+                size = upload.stat().st_size
+                if size > self._MAX_UPLOAD_BYTES:
+                    raise ValueError(
+                        f"Compressed audio is {size / 1e6:.0f} MB, over the API cap"
+                    )
+
+                logger.info(
+                    f"Cloud transcription: uploading {size / 1e6:.1f} MB to {self._MODEL}..."
+                )
+                with open(upload, "rb") as f:
+                    resp = self._get_client().audio.transcriptions.create(
+                        file=f,
+                        model=self._MODEL,
+                        response_format="diarized_json",
+                        chunking_strategy="auto",
+                        **self._speaker_kwargs(),
+                    )
+
+            segments = [
+                TranscriptSegment(
+                    start=seg.start,
+                    end=seg.end,
+                    text=seg.text.strip(),
+                    speaker=getattr(seg, "speaker", None),
+                )
+                for seg in resp.segments
+            ]
+            duration = segments[-1].end if segments else 0.0
+            logger.info(
+                f"Cloud transcription complete: {len(segments)} segments, "
+                f"{duration:.1f}s, speakers: {sorted({s.speaker for s in segments if s.speaker})}"
+            )
+            return TranscriptResult(
+                text=" ".join(s.text for s in segments if s.text),
+                segments=segments,
+                language=getattr(resp, "language", None) or "unknown",
+                duration=duration,
+            )
+        except Exception as exc:  # noqa: BLE001 - fallback must catch everything
+            logger.warning(
+                f"Cloud transcription failed ({exc}). Falling back to local whisper."
+            )
+            return self.fallback.transcribe(audio_path, progress_callback)
+
+    # Same formatting logic as the local transcriber. The staticmethod
+    # re-wrap matters: class-body access returns the bare function, which
+    # would otherwise bind as an instance method and swallow `self`.
+    format_transcript_with_timestamps = WhisperTranscriber.format_transcript_with_timestamps
+    _format_timestamp = staticmethod(WhisperTranscriber._format_timestamp)
+
+
+def create_transcriber(config):
+    """Build the transcriber the config asks for.
+
+    ``transcription_provider: openai`` needs an OpenAI key (config or env);
+    otherwise we quietly stay on the local pipeline.
+    """
+    import os
+
+    if config.transcription_provider == "openai":
+        api_key = config.openai_api_key or os.getenv("OPENAI_API_KEY")
+        if api_key:
+            return OpenAITranscriber(
+                api_key=api_key,
+                fallback=WhisperTranscriber(
+                    config.whisper_model, device=config.whisper_device
+                ),
+                voices_dir=config.voices_dir,
+            )
+        logger.warning(
+            "transcription_provider is 'openai' but no OpenAI API key is "
+            "configured — using local transcription"
+        )
+    return WhisperTranscriber(config.whisper_model, device=config.whisper_device)
 
 
 if __name__ == "__main__":

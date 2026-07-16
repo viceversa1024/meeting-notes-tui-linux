@@ -29,13 +29,27 @@ class AppConfig:
     # Other settings
     whisper_model: str = "base"
     # Whisper compute device: "cpu" (default, safe everywhere), "cuda" (force GPU),
-    # or "auto" (let whisper/torch decide). "cpu" matches the README's
-    # privacy-first CPU pipeline and dodges broken-CUDA-wheel crashes like
-    # "no kernel image is available for execution on the device".
+    # or "auto" (let faster-whisper/ctranslate2 decide). "cpu" matches the
+    # README's privacy-first CPU pipeline and dodges broken CUDA setups
+    # (missing cuDNN, "no kernel image is available", ...).
     whisper_device: str = "cpu"
+    # "local" (faster-whisper, default) or "openai" (cloud
+    # gpt-4o-transcribe-diarize with speaker labels; needs the OpenAI key;
+    # falls back to local automatically on any failure).
+    transcription_provider: str = "local"
+    # Voice tag library for cloud diarization: a folder of 2-10s clips,
+    # one per person, filename stem = speaker name (e.g. Alex.wav). The 4
+    # most recently modified are sent with each cloud transcription so
+    # matching segments come back labeled by name. Grow it with:
+    #   python -m meeting_notes.voice_tag <transcript> <label> <name>
+    voices_dir: str = "~/.config/meeting-notes/voices"
     notes_dir: str = "notes"
     recordings_dir: str = "recordings"
     transcripts_dir: str = "transcripts"
+    # Optional Obsidian vault folder that receives a copy of each summary
+    # note (markdown only; transcripts and recordings stay out). Empty
+    # string disables the export.
+    obsidian_dir: str = ""
     editor: str = "nvim"
     terminal_file_browser: str = ""  # Terminal file browser (ranger, vidir, nnn, lf, vifm, yazi, etc.)
     recording_mode: str = "combined"
@@ -164,7 +178,7 @@ def validate_config(config: AppConfig) -> tuple[bool, Optional[str]]:
                 "ai_provider is 'openai' but no API key found.\n"
                 "Set OPENAI_API_KEY environment variable or openai_api_key in config"
             )
-        valid_models = ["mini", "standard"]
+        valid_models = ["mini", "standard", "best"]
         if config.ai_model not in valid_models:
             return False, f"Invalid ai_model for OpenAI: {config.ai_model}. Must be one of {valid_models}"
     
@@ -199,6 +213,11 @@ def validate_config(config: AppConfig) -> tuple[bool, Optional[str]]:
     valid_devices = ["cpu", "cuda", "auto"]
     if config.whisper_device not in valid_devices:
         return False, f"Invalid whisper_device: {config.whisper_device}. Must be one of {valid_devices}"
+
+    # Validate transcription provider
+    valid_transcription = ["local", "openai"]
+    if config.transcription_provider not in valid_transcription:
+        return False, f"Invalid transcription_provider: {config.transcription_provider}. Must be one of {valid_transcription}"
 
     # Validate recording mode
     valid_modes = ["mic", "system", "combined"]

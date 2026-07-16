@@ -7,8 +7,8 @@ We just want to catch:
   - Switching providers in settings doesn't crash with the duplicate-ID
     error (the bug PR #9 fixed; this is a regression guard)
 
-These tests transitively import whisper (via meeting_notes.app →
-meeting_notes.transcriber), which pulls in torch. CI deliberately skips
+These tests transitively import faster_whisper (via meeting_notes.app →
+meeting_notes.transcriber). CI deliberately skips
 this file to keep install time fast — see .github/workflows/ci.yml. To
 run locally:
 
@@ -20,7 +20,7 @@ import pytest
 # Skip the entire module if the heavy deps (whisper / textual) aren't
 # installed. Avoids confusing import errors for contributors who only
 # installed the lightweight test deps.
-pytest.importorskip("whisper", reason="run `pip install -e .[all,dev]` to enable Textual smoke tests")
+pytest.importorskip("faster_whisper", reason="run `pip install -e .[all,dev]` to enable Textual smoke tests")
 pytest.importorskip("textual", reason="run `pip install -e .[all,dev]` to enable Textual smoke tests")
 
 from meeting_notes.app import MeetingNotesApp  # noqa: E402  (deliberate import-after-skip)
