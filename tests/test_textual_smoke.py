@@ -112,14 +112,17 @@ async def test_new_settings_sections_render(tmp_path, monkeypatch):
         await pilot.press(",")
         await pilot.pause()
 
-        for section in ["section-transcription", "section-obsidian",
-                        "section-voices", "section-transcription"]:
+        for section in ["section-obsidian", "section-voices", "section-ai"]:
             await pilot.click(f"#{section}")
             await pilot.pause()
 
-        # Transcription section shows the provider toggle
+        # Transcription lives inside AI Models (merged sections) — the
+        # provider toggle and whisper model picker render there.
         assert app.screen.query("#transprov-local")
         assert app.screen.query("#transprov-openai")
+        assert app.screen.query("#whispermodel-base")
+        # No separate Transcription sidebar entry remains.
+        assert not app.screen.query("#section-transcription")
         app.exit()
 
 
@@ -133,11 +136,15 @@ async def test_transcription_provider_toggle_updates_config(tmp_path, monkeypatc
         await pilot.pause()
         await pilot.press(",")
         await pilot.pause()
-        await pilot.click("#section-transcription")
+        # AI Models is the default section; the provider toggle is in it
+        # (below the summarization widgets — scroll it into view first).
+        app.screen.query_one("#transprov-openai").scroll_visible(animate=False)
         await pilot.pause()
         await pilot.click("#transprov-openai")
         await pilot.pause()
         assert app.screen.config["transcription_provider"] == "openai"
+        app.screen.query_one("#transprov-local").scroll_visible(animate=False)
+        await pilot.pause()
         await pilot.click("#transprov-local")
         await pilot.pause()
         assert app.screen.config["transcription_provider"] == "local"

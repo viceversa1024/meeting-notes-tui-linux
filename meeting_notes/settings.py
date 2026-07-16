@@ -338,7 +338,6 @@ class SettingsScreen(Screen):
             with Vertical(id="settings-sidebar"):
                 yield Static("⚙️  Settings", classes="settings-section-title")
                 yield Button("AI Models", id="section-ai", classes="sidebar-item -active")
-                yield Button("Transcription", id="section-transcription", classes="sidebar-item")
                 yield Button("Obsidian", id="section-obsidian", classes="sidebar-item")
                 yield Button("Voice Tags", id="section-voices", classes="sidebar-item")
                 yield Button("Directories", id="section-dirs", classes="sidebar-item")
@@ -400,11 +399,13 @@ class SettingsScreen(Screen):
         elif current_provider == "none":
             widgets.append(Static("✓ No AI summarization - transcripts only", classes="settings-hint"))
         
-        # Transcription moved to its own section (sidebar: Transcription).
+        # Transcription settings share this section (one "AI Models" tab).
+        widgets.append(Static(""))  # Spacer
+        widgets.extend(self.render_transcription_widgets())
         return widgets
 
-    def render_transcription_section(self) -> list:
-        """Render Transcription section (provider, whisper model, language)."""
+    def render_transcription_widgets(self) -> list:
+        """Transcription widgets (provider, whisper model, language)."""
         widgets = []
 
         widgets.append(Static("🎙️  Transcription", classes="settings-section-title"))
@@ -1016,8 +1017,6 @@ class SettingsScreen(Screen):
         # Render appropriate section
         if self.current_section == "ai":
             widgets = self.render_ai_section()
-        elif self.current_section == "transcription":
-            widgets = self.render_transcription_section()
         elif self.current_section == "obsidian":
             widgets = self.render_obsidian_section()
         elif self.current_section == "voices":
