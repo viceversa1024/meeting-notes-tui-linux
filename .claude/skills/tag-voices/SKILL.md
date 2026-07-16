@@ -10,8 +10,10 @@ description: Use when adding or fixing a speaker in the voice tag library — a 
 The voice tag library (`voices_dir` in config, default
 `~/.config/meeting-notes/voices/`) holds one short clip per person;
 filename stem = the name shown in transcripts. Cloud transcriptions send
-the **4 most recently modified** clips as reference voices. One command
-grows the library from any labeled transcript — never cut audio manually:
+up to **4** clips as reference voices, picked by likelihood of presence:
+`primary_voice` from config (the user), then people named in the meeting
+title, then most recently modified. One command grows the library from
+any labeled transcript — never cut audio manually:
 
 ```bash
 venv/bin/python -m meeting_notes.voice_tag <transcript.txt> <label> <Name> --recording <recording.wav>
@@ -38,9 +40,10 @@ venv/bin/python -m meeting_notes.voice_tag <transcript.txt> <label> <Name> --rec
    words match the printed line:
    `venv/bin/python -c "from faster_whisper import WhisperModel; m=WhisperModel('base',device='cpu',compute_type='int8'); print(' '.join(s.text for s,_ in zip(*[iter(m.transcribe('<clip>')[0])]*1)))"`
    — or simply `ffprobe` it and play it back for the user.
-5. **Mind the cap.** Only the 4 newest clips are sent. Adding a 5th person
-   silently deactivates the oldest — tell the user which clips are active
-   (`ls -t` the library). `touch` a clip to reactivate it.
+5. **Mind the cap.** Only 4 clips are sent per meeting: primary voice,
+   title-matched names, then newest. With more than 4 tags, tell the user
+   who made the cut for a typical meeting; a person named in the meeting
+   title is always included, and `touch`-ing a clip bumps its recency.
 
 ## Quick reference
 

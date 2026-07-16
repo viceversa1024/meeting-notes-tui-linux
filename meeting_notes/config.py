@@ -46,7 +46,12 @@ class AppConfig:
     # most recently modified are sent with each cloud transcription so
     # matching segments come back labeled by name. Grow it with:
     #   python -m meeting_notes.voice_tag <transcript> <label> <name>
+    # Only 4 clips fit per request; they're picked by likelihood of being
+    # in the meeting: primary_voice first (that's you — you're in every
+    # meeting you record), then people named in the meeting title, then
+    # most recently modified.
     voices_dir: str = "~/.config/meeting-notes/voices"
+    primary_voice: str = ""
     notes_dir: str = "notes"
     recordings_dir: str = "recordings"
     transcripts_dir: str = "transcripts"

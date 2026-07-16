@@ -132,8 +132,10 @@ class WhisperTranscriber:
         self,
         audio_path: str,
         progress_callback: Optional[Callable[[float], None]] = None,
+        title_hint: str = "",
     ) -> TranscriptResult:
-        """Transcribe an audio file."""
+        """Transcribe an audio file. title_hint is unused locally (kept for
+        interface parity with OpenAITranscriber)."""
         logger.info(f"Starting transcription: {audio_path}")
         self.load_model()
 
@@ -232,12 +234,14 @@ class OpenAITranscriber:
         fallback: "WhisperTranscriber",
         voices_dir: str = "",
         language: str = "en",
+        primary_voice: str = "",
     ):
         logger.info("Initializing OpenAITranscriber (cloud, diarized)")
         self.api_key = api_key
         self.fallback = fallback
         self.voices_dir = voices_dir
         self.language = language
+        self.primary_voice = primary_voice
         self._client = None
 
     @staticmethod
@@ -260,11 +264,13 @@ class OpenAITranscriber:
         )
         return False
 
-    def _speaker_kwargs(self) -> dict:
+    def _speaker_kwargs(self, title_hint: str = "") -> dict:
         """known-speaker params from the voice library, {} if unusable.
 
-        Sends the 4 most recently modified clips (API cap) so recently
-        tagged people stay resolvable. Never fails the transcription.
+        Only 4 clips fit per request (API cap), picked by likelihood of
+        being in THIS meeting: the primary voice (the user records every
+        meeting they attend), then people named in the meeting title, then
+        most recently modified. Never fails the transcription.
         """
         if not self.voices_dir:
             return {}
@@ -272,11 +278,30 @@ class OpenAITranscriber:
         if not lib.is_dir():
             return {}
 
-        clips = sorted(
+        by_recency = sorted(
             (p for p in lib.iterdir() if p.suffix.lower() in self._VOICE_MIMES),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
-        )[: self._MAX_KNOWN_SPEAKERS]
+        )
+        import re
+
+        def named_in_title(stem: str) -> bool:
+            # Whole-word match so short stems don't hit inside other words
+            # ("dana" matches "dana <-> sam"; "c" must not match "catch").
+            return bool(title_hint) and len(stem) > 1 and bool(
+                re.search(rf"\b{re.escape(stem)}\b", title_hint, re.IGNORECASE)
+            )
+
+        clips = []
+        for tier in (
+            [p for p in by_recency if self.primary_voice and p.stem == self.primary_voice],
+            [p for p in by_recency if named_in_title(p.stem)],
+            by_recency,
+        ):
+            for p in tier:
+                if p not in clips:
+                    clips.append(p)
+        clips = clips[: self._MAX_KNOWN_SPEAKERS]
 
         import base64
 
@@ -322,8 +347,13 @@ class OpenAITranscriber:
         self,
         audio_path: str,
         progress_callback: Optional[Callable[[float], None]] = None,
+        title_hint: str = "",
     ) -> TranscriptResult:
-        """Transcribe in the cloud; fall back to local on any failure."""
+        """Transcribe in the cloud; fall back to local on any failure.
+
+        title_hint (e.g. the meeting title) helps pick which voice tags to
+        send — people named in the title are almost certainly present.
+        """
         audio_file = Path(audio_path)
         if not audio_file.exists():
             logger.error(f"Audio file not found: {audio_file}")
@@ -352,7 +382,7 @@ class OpenAITranscriber:
                         response_format="diarized_json",
                         chunking_strategy="auto",
                         **lang_kwargs,
-                        **self._speaker_kwargs(),
+                        **self._speaker_kwargs(title_hint),
                     )
 
             segments = [
@@ -409,6 +439,7 @@ def create_transcriber(config):
                 ),
                 voices_dir=config.voices_dir,
                 language=config.whisper_language,
+                primary_voice=config.primary_voice,
             )
         logger.warning(
             "transcription_provider is 'openai' but no OpenAI API key is "

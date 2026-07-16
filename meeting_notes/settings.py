@@ -515,8 +515,10 @@ class SettingsScreen(Screen):
         widgets.append(Static("🎤 Voice Tags", classes="settings-section-title"))
         widgets.append(Static(
             "Reference clips (1.2-10s) of people's voices. With cloud "
-            "transcription, the 4 most recently modified ride along with "
-            "each request so transcript segments come back labeled by name.",
+            "transcription, up to 4 ride along with each request so "
+            "transcript segments come back labeled by name. Slots go to "
+            "the primary voice (you), then people named in the meeting "
+            "title, then the most recently tagged.",
             classes="settings-hint",
         ))
 
@@ -539,11 +541,18 @@ class SettingsScreen(Screen):
                 key=lambda p: p.stat().st_mtime,
                 reverse=True,
             )
+        primary = self.config.get("primary_voice", "")
         if clips:
-            for i, clip in enumerate(clips):
-                active = "● sent" if i < 4 else "○ inactive (only 4 newest are sent)"
+            for clip in clips:
+                marker = "★ primary (always sent)" if clip.stem == primary else "●"
                 widgets.append(Static(
-                    f"  {clip.stem}  ({clip.name}) — {active}",
+                    f"  {marker} {clip.stem}  ({clip.name})",
+                    classes="settings-hint",
+                ))
+            if len(clips) > 4:
+                widgets.append(Static(
+                    "  (more than 4 tags — primary, title matches, then "
+                    "newest fill the 4 slots per meeting)",
                     classes="settings-hint",
                 ))
         else:

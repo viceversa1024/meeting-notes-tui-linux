@@ -1487,7 +1487,9 @@ class MeetingNotesApp(App):
             # Transcribe
             logger.info("Starting transcription")
             self.call_from_thread(self.notify, "Transcribing audio (this may take a few minutes)...", severity="information")
-            result = self.transcriber.transcribe(audio_path)
+            result = self.transcriber.transcribe(
+                audio_path, title_hint=meeting_title or ""
+            )
             
             word_count = len(result.text.split())
             logger.info(f"Transcription complete: {word_count} words")

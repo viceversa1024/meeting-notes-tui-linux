@@ -165,16 +165,21 @@ def test_voice_library_sent_as_data_urls(cloud, tmp_path):
     assert result.segments[0].speaker == "Alex"
 
 
-def test_voice_library_caps_at_four_most_recent(cloud, tmp_path):
+def _library(tmp_path, names):
+    """A voices dir where names are ordered oldest -> newest."""
     import os
 
     voices = tmp_path / "voices"
     voices.mkdir()
-    for i, name in enumerate(["a", "b", "c", "d", "e", "f"]):
+    for i, name in enumerate(names):
         p = voices / f"{name}.wav"
         _write_wav(p, seconds=2)
-        os.utime(p, (1000 + i, 1000 + i))  # f is newest, a oldest
-    cloud.voices_dir = str(voices)
+        os.utime(p, (1000 + i, 1000 + i))
+    return voices
+
+
+def test_voice_library_caps_at_four_most_recent(cloud, tmp_path):
+    cloud.voices_dir = str(_library(tmp_path, ["a", "b", "c", "d", "e", "f"]))
 
     audio = tmp_path / "m.wav"
     _write_wav(audio)
@@ -183,6 +188,96 @@ def test_voice_library_caps_at_four_most_recent(cloud, tmp_path):
     cloud.transcribe(str(audio))
 
     assert sorted(calls[0]["known_speaker_names"]) == ["c", "d", "e", "f"]
+
+
+def test_primary_voice_always_sent(cloud, tmp_path):
+    """The user is in every meeting they record — their clip must never
+    age out of the 4, even as the oldest file in the library."""
+    cloud.voices_dir = str(_library(tmp_path, ["Me", "b", "c", "d", "e", "f"]))
+    cloud.primary_voice = "Me"
+
+    audio = tmp_path / "m.wav"
+    _write_wav(audio)
+    calls = _install_fake_client(cloud, response=FakeApiResponse([]))
+
+    cloud.transcribe(str(audio))
+
+    names = calls[0]["known_speaker_names"]
+    assert "Me" in names and len(names) == 4
+    # remaining slots go to the newest
+    assert set(names) == {"Me", "d", "e", "f"}
+
+
+def test_title_hint_beats_recency(cloud, tmp_path):
+    """People named in the meeting title are almost certainly present —
+    they outrank recently-tagged strangers."""
+    cloud.voices_dir = str(_library(tmp_path, ["Dana", "b", "c", "d", "e", "f"]))
+
+    audio = tmp_path / "m.wav"
+    _write_wav(audio)
+    calls = _install_fake_client(cloud, response=FakeApiResponse([]))
+
+    cloud.transcribe(str(audio), title_hint="weekly sync dana <-> sam")
+
+    names = calls[0]["known_speaker_names"]
+    assert "Dana" in names and len(names) == 4  # case-insensitive title match
+
+
+def test_primary_and_title_dedupe(cloud, tmp_path):
+    cloud.voices_dir = str(_library(tmp_path, ["Me", "Dana", "c", "d", "e", "f"]))
+    cloud.primary_voice = "Me"
+
+    audio = tmp_path / "m.wav"
+    _write_wav(audio)
+    calls = _install_fake_client(cloud, response=FakeApiResponse([]))
+
+    cloud.transcribe(str(audio), title_hint="me and dana catch up")
+
+    names = calls[0]["known_speaker_names"]
+    assert len(names) == len(set(names)) == 4
+    assert {"Me", "Dana"} <= set(names)
+
+
+def test_factory_passes_primary_voice(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from meeting_notes.transcriber import OpenAITranscriber, create_transcriber
+
+    cfg = AppConfig(
+        transcription_provider="openai",
+        openai_api_key="sk-test",
+        primary_voice="Me",
+    )
+    t = create_transcriber(cfg)
+    assert isinstance(t, OpenAITranscriber)
+    assert t.primary_voice == "Me"
+
+
+def test_local_transcriber_accepts_title_hint(tmp_path):
+    """Interface parity: the app passes title_hint regardless of backend."""
+    import sys
+    import types
+
+    fake_mod = types.ModuleType("faster_whisper")
+
+    class _M:
+        def __init__(self, *a, **k):
+            pass
+
+        def transcribe(self, path, **kwargs):
+            from tests.test_cloud_transcriber import FakeApiResponse  # noqa: F401
+            return iter([]), types.SimpleNamespace(language="en", duration=0.0)
+
+    fake_mod.WhisperModel = _M
+    sys.modules["faster_whisper"] = fake_mod
+    try:
+        from meeting_notes.transcriber import WhisperTranscriber
+
+        t = WhisperTranscriber("base", device="cpu")
+        audio = tmp_path / "m.wav"
+        _write_wav(audio)
+        t.transcribe(str(audio), title_hint="ignored by local")  # must not raise
+    finally:
+        del sys.modules["faster_whisper"]
 
 
 def test_voice_library_mime_by_extension(cloud, tmp_path):

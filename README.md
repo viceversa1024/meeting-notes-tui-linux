@@ -218,10 +218,12 @@ for the fully-private pipeline.
 ### Voice tags: name the speakers
 
 Drop a 1.2–10s clip of someone's voice into the voice library
-(`~/.config/meeting-notes/voices/` by default), named `Person.wav` — the 4
-most recently modified clips ride along with each cloud transcription and
-matching segments come back as `**[04:12] Person:** ...` instead of
-`A:`/`B:`. You never need to cut audio by hand: after any meeting where a
+(`~/.config/meeting-notes/voices/` by default), named `Person.wav` — up to
+4 clips ride along with each cloud transcription and matching segments
+come back as `**[04:12] Person:** ...` instead of `A:`/`B:`. Slots are
+picked by likelihood of being in the meeting: `primary_voice` (set it to
+your own name — you're in every meeting you record), then people named in
+the meeting title, then the most recently tagged. You never need to cut audio by hand: after any meeting where a
 new person shows up as a letter label,
 
 ```bash
