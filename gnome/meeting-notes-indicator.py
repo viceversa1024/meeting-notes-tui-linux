@@ -81,3 +81,59 @@ def read_status(path: Path) -> dict[str, str]:
         return parse_status_file(path.read_text())
     except Exception:
         return {}
+
+
+def main() -> int:
+    # GTK imports stay inside main() — see module docstring.
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("AyatanaAppIndicator3", "0.1")
+    from gi.repository import GLib, Gtk
+    from gi.repository import AyatanaAppIndicator3 as AppIndicator
+
+    repo = repo_root()
+    status_path = repo / ".status"
+    launcher = Path.home() / ".local" / "bin" / "meeting-notes"
+
+    indicator = AppIndicator.Indicator.new(
+        "meeting-notes",
+        ICONS["not_running"],
+        AppIndicator.IndicatorCategory.APPLICATION_STATUS,
+    )
+    indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
+
+    def on_open(_item):
+        subprocess.Popen([str(launcher)])
+
+    def on_notes(_item):
+        subprocess.Popen(["xdg-open", str(repo / "notes")])
+
+    menu = Gtk.Menu()
+    for label, handler in (
+        ("Open Meeting Notes", on_open),
+        ("Open notes folder", on_notes),
+        ("Quit indicator", lambda _item: Gtk.main_quit()),
+    ):
+        item = Gtk.MenuItem(label=label)
+        item.connect("activate", handler)
+        menu.append(item)
+    menu.show_all()
+    indicator.set_menu(menu)
+
+    def refresh() -> bool:
+        state, label, title = resolve_state(app_running(), read_status(status_path))
+        indicator.set_icon_full(ICONS[state], title)
+        # Guide width "88:88" stops the bar jittering as digits change.
+        indicator.set_label(label, "88:88")
+        indicator.set_title(title)
+        return True  # keep the GLib timer alive
+
+    refresh()
+    GLib.timeout_add_seconds(POLL_SECONDS, refresh)
+    Gtk.main()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
