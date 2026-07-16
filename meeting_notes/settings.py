@@ -338,6 +338,9 @@ class SettingsScreen(Screen):
             with Vertical(id="settings-sidebar"):
                 yield Static("⚙️  Settings", classes="settings-section-title")
                 yield Button("AI Models", id="section-ai", classes="sidebar-item -active")
+                yield Button("Transcription", id="section-transcription", classes="sidebar-item")
+                yield Button("Obsidian", id="section-obsidian", classes="sidebar-item")
+                yield Button("Voice Tags", id="section-voices", classes="sidebar-item")
                 yield Button("Directories", id="section-dirs", classes="sidebar-item")
                 yield Button("Audio", id="section-audio", classes="sidebar-item")
                 yield Button("Editor", id="section-editor", classes="sidebar-item")
@@ -397,12 +400,161 @@ class SettingsScreen(Screen):
         elif current_provider == "none":
             widgets.append(Static("✓ No AI summarization - transcripts only", classes="settings-hint"))
         
-        # Whisper Model (Transcription)
+        # Transcription moved to its own section (sidebar: Transcription).
+        return widgets
+
+    def render_transcription_section(self) -> list:
+        """Render Transcription section (provider, whisper model, language)."""
+        widgets = []
+
+        widgets.append(Static("🎙️  Transcription", classes="settings-section-title"))
+
+        widgets.append(Static("Provider", classes="settings-label"))
+        current_provider = self.config.get("transcription_provider", "local")
+        providers = [
+            ("local", "Local (faster-whisper)",
+             "Private — audio never leaves this machine. CPU-speed."),
+            ("openai", "OpenAI Cloud (diarized)",
+             "Fast, labels speakers by name via voice tags. Uses your OpenAI "
+             "key; falls back to local automatically on any failure."),
+        ]
+        for prov_id, label, hint in providers:
+            is_current = prov_id == current_provider
+            btn = Button(
+                f"{'●' if is_current else '○'} {label}",
+                id=f"transprov-{prov_id}",
+                variant="primary" if is_current else "default",
+            )
+            btn.trans_provider_id = prov_id
+            widgets.append(btn)
+            widgets.append(Static(hint, classes="settings-hint"))
+
         widgets.append(Static(""))  # Spacer
-        widgets.append(Static("Whisper Model (Transcription)", classes="settings-label"))
-        widgets.append(Static(f"Current: {self.config.get('whisper_model', 'base')}", classes="settings-hint"))
-        widgets.append(Static("(Model selection coming soon)", classes="settings-hint"))
-        
+        widgets.append(Static("Whisper Model", classes="settings-label"))
+        widgets.append(Static(
+            "Used for local transcription (and as the cloud fallback). "
+            "Bigger = more accurate, slower on CPU.",
+            classes="settings-hint",
+        ))
+        current_model = self.config.get("whisper_model", "base")
+        for model in ["tiny", "base", "small", "medium", "large"]:
+            is_current = model == current_model
+            btn = Button(
+                f"{'●' if is_current else '○'} {model}",
+                id=f"whispermodel-{model}",
+                variant="primary" if is_current else "default",
+            )
+            btn.whisper_model_id = model
+            widgets.append(btn)
+
+        widgets.append(Static(""))  # Spacer
+        widgets.append(Static("Language", classes="settings-label"))
+        lang_input = Input(
+            value=self.config.get("whisper_language", "en"),
+            id="whisper-language-input",
+            classes="settings-input",
+            placeholder="en",
+        )
+        widgets.append(lang_input)
+        widgets.append(Static(
+            "Language code to pin transcription to (e.g. en). Empty = "
+            "auto-detect, which can misfire on a quiet meeting opening.",
+            classes="settings-hint",
+        ))
+
+        return widgets
+
+    def render_obsidian_section(self) -> list:
+        """Render Obsidian export section."""
+        from pathlib import Path
+
+        widgets = []
+        widgets.append(Static("🗒️  Obsidian Export", classes="settings-section-title"))
+
+        widgets.append(Static("Vault Folder", classes="settings-label"))
+        obsidian_input = Input(
+            value=self.config.get("obsidian_dir", ""),
+            id="obsidian-dir-input",
+            classes="settings-input",
+            placeholder="~/Documents/Obsidian Vault/meetings",
+        )
+        widgets.append(obsidian_input)
+        widgets.append(Static(
+            "Each meeting's summary note (markdown only — no transcripts or "
+            "recordings) is copied here after saving. Empty = export off. "
+            "A missing/unwritable folder never blocks note creation.",
+            classes="settings-hint",
+        ))
+
+        obsidian_dir = (self.config.get("obsidian_dir") or "").strip()
+        if obsidian_dir:
+            vault = Path(obsidian_dir).expanduser()
+            if vault.is_dir():
+                count = len(list(vault.glob("*.md")))
+                widgets.append(Static(
+                    f"✓ Folder exists — {count} exported note(s)",
+                    classes="settings-hint",
+                ))
+            else:
+                widgets.append(Static(
+                    "Folder doesn't exist yet — it will be created on the "
+                    "first export.",
+                    classes="settings-hint",
+                ))
+        else:
+            widgets.append(Static("✗ Export disabled", classes="settings-hint"))
+
+        return widgets
+
+    def render_voices_section(self) -> list:
+        """Render voice tag library section."""
+        from pathlib import Path
+
+        widgets = []
+        widgets.append(Static("🎤 Voice Tags", classes="settings-section-title"))
+        widgets.append(Static(
+            "Reference clips (1.2-10s) of people's voices. With cloud "
+            "transcription, the 4 most recently modified ride along with "
+            "each request so transcript segments come back labeled by name.",
+            classes="settings-hint",
+        ))
+
+        widgets.append(Static("Library Folder", classes="settings-label"))
+        voices_input = Input(
+            value=self.config.get("voices_dir", "~/.config/meeting-notes/voices"),
+            id="voices-dir-input",
+            classes="settings-input",
+        )
+        widgets.append(voices_input)
+
+        widgets.append(Static(""))  # Spacer
+        widgets.append(Static("Tagged Voices", classes="settings-label"))
+        lib = Path(self.config.get("voices_dir", "") or "").expanduser()
+        clips = []
+        if lib.is_dir():
+            clips = sorted(
+                (p for p in lib.iterdir()
+                 if p.suffix.lower() in (".wav", ".mp3", ".m4a", ".webm")),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+        if clips:
+            for i, clip in enumerate(clips):
+                active = "● sent" if i < 4 else "○ inactive (only 4 newest are sent)"
+                widgets.append(Static(
+                    f"  {clip.stem}  ({clip.name}) — {active}",
+                    classes="settings-hint",
+                ))
+        else:
+            widgets.append(Static("  (no voice tags yet)", classes="settings-hint"))
+
+        widgets.append(Static(""))  # Spacer
+        widgets.append(Static(
+            "Add someone from any labeled transcript:\n"
+            "  python -m meeting_notes.voice_tag <transcript> <label> <name>",
+            classes="settings-hint",
+        ))
+
         return widgets
     
     def render_openai_settings(self) -> list:
@@ -745,6 +897,18 @@ class SettingsScreen(Screen):
         if button_id and button_id.startswith("section-"):
             section = button_id.split("-")[1]
             await self.switch_section(section)
+
+        # Transcription provider selection
+        elif button_id and button_id.startswith("transprov-"):
+            if hasattr(event.button, "trans_provider_id"):
+                self.config["transcription_provider"] = event.button.trans_provider_id
+                await self.refresh_content()
+
+        # Whisper model selection
+        elif button_id and button_id.startswith("whispermodel-"):
+            if hasattr(event.button, "whisper_model_id"):
+                self.config["whisper_model"] = event.button.whisper_model_id
+                await self.refresh_content()
         
         # Provider selection
         elif button_id and button_id.startswith("provider-"):
@@ -815,6 +979,22 @@ class SettingsScreen(Screen):
         elif button_id == "cancel-button":
             self.action_cancel()
     
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Persist new-style inputs into config immediately.
+
+        The legacy inputs are only read back in action_save() while mounted;
+        capturing on change means edits survive switching sections before
+        hitting Save.
+        """
+        live_inputs = {
+            "whisper-language-input": "whisper_language",
+            "obsidian-dir-input": "obsidian_dir",
+            "voices-dir-input": "voices_dir",
+        }
+        key = live_inputs.get(event.input.id or "")
+        if key:
+            self.config[key] = event.value.strip()
+
     async def switch_section(self, section: str) -> None:
         """Switch to a different settings section."""
         self.current_section = section
@@ -836,6 +1016,12 @@ class SettingsScreen(Screen):
         # Render appropriate section
         if self.current_section == "ai":
             widgets = self.render_ai_section()
+        elif self.current_section == "transcription":
+            widgets = self.render_transcription_section()
+        elif self.current_section == "obsidian":
+            widgets = self.render_obsidian_section()
+        elif self.current_section == "voices":
+            widgets = self.render_voices_section()
         elif self.current_section == "dirs":
             widgets = self.render_directories_section()
         elif self.current_section == "audio":

@@ -97,3 +97,48 @@ async def test_switching_providers_does_not_duplicate_widget_ids(tmp_path, monke
                 raise
 
         app.exit()
+
+
+@pytest.mark.asyncio
+async def test_new_settings_sections_render(tmp_path, monkeypatch):
+    """Transcription / Obsidian / Voice Tags sections mount without error
+    and re-render cleanly (no duplicate widget IDs on revisit)."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    app = MeetingNotesApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.press(",")
+        await pilot.pause()
+
+        for section in ["section-transcription", "section-obsidian",
+                        "section-voices", "section-transcription"]:
+            await pilot.click(f"#{section}")
+            await pilot.pause()
+
+        # Transcription section shows the provider toggle
+        assert app.screen.query("#transprov-local")
+        assert app.screen.query("#transprov-openai")
+        app.exit()
+
+
+@pytest.mark.asyncio
+async def test_transcription_provider_toggle_updates_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    app = MeetingNotesApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.press(",")
+        await pilot.pause()
+        await pilot.click("#section-transcription")
+        await pilot.pause()
+        await pilot.click("#transprov-openai")
+        await pilot.pause()
+        assert app.screen.config["transcription_provider"] == "openai"
+        await pilot.click("#transprov-local")
+        await pilot.pause()
+        assert app.screen.config["transcription_provider"] == "local"
+        app.exit()
