@@ -19,7 +19,7 @@ from textual.screen import Screen, ModalScreen
 from textual import work
 
 from meeting_notes.recorder import AudioRecorder, list_active_sink_inputs
-from meeting_notes.transcriber import WhisperTranscriber
+from meeting_notes.transcriber import create_transcriber
 from meeting_notes.note_maker import NoteMaker
 from meeting_notes.config import load_config, save_config, AppConfig, validate_config
 from meeting_notes.settings import SettingsScreen
@@ -753,10 +753,7 @@ class MeetingNotesApp(App):
         
         # Initialize components with config values
         self.recorder: Optional[AudioRecorder] = None
-        self.transcriber = WhisperTranscriber(
-            self.config.whisper_model,
-            device=self.config.whisper_device,
-        )
+        self.transcriber = create_transcriber(self.config)
         
         # Get appropriate API key based on provider (check config first, then env vars)
         api_key = None
@@ -772,7 +769,8 @@ class MeetingNotesApp(App):
             transcripts_dir=self.config.transcripts_dir,
             ai_provider=self.config.ai_provider,
             ai_model=self.config.ai_model,
-            api_key=api_key
+            api_key=api_key,
+            obsidian_dir=self.config.obsidian_dir
         )
         self.notes_dir = Path(self.config.notes_dir).expanduser()
         self.notes_dir.mkdir(parents=True, exist_ok=True)
@@ -2015,10 +2013,7 @@ class MeetingNotesApp(App):
             self.config = new_config
             
             # Reinitialize components with new config
-            self.transcriber = WhisperTranscriber(
-                self.config.whisper_model,
-                device=self.config.whisper_device,
-            )
+            self.transcriber = create_transcriber(self.config)
             
             # Get appropriate API key based on provider (check config first, then env vars)
             api_key = None
@@ -2034,7 +2029,8 @@ class MeetingNotesApp(App):
                 transcripts_dir=self.config.transcripts_dir,
                 ai_provider=self.config.ai_provider,
                 ai_model=self.config.ai_model,
-                api_key=api_key
+                api_key=api_key,
+                obsidian_dir=self.config.obsidian_dir
             )
             self.notes_dir = Path(self.config.notes_dir).expanduser()
             self.notes_dir.mkdir(parents=True, exist_ok=True)

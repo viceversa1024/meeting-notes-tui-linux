@@ -416,8 +416,9 @@ class SettingsScreen(Screen):
         current_model = self.config.get("ai_model", "mini")
         
         models = [
-            ("mini", "GPT-4o Mini", "~$0.001/meeting - Ultra cheap"),
-            ("standard", "GPT-4o", "~$0.015/meeting - Best quality"),
+            ("mini", "GPT-5.4 Mini", "~$0.005/meeting - Cheap"),
+            ("standard", "GPT-5.6 Terra", "~$0.02/meeting - Great quality"),
+            ("best", "GPT-5.6 Sol", "~$0.04/meeting - Flagship"),
         ]
         
         for model_id, model_name, model_desc in models:
@@ -689,8 +690,8 @@ class SettingsScreen(Screen):
         current_device = self.config.get("whisper_device", "cpu")
         for dev_id, label, desc in [
             ("cpu", "CPU", "Safe everywhere; matches the documented privacy-first default"),
-            ("cuda", "CUDA (GPU)", "Faster, but requires a working torch+CUDA install"),
-            ("auto", "Auto", "Let torch pick — falls back to CPU if CUDA fails"),
+            ("cuda", "CUDA (GPU)", "Faster, but requires working CUDA libraries (cuBLAS + cuDNN)"),
+            ("auto", "Auto", "Let ctranslate2 pick — falls back to CPU if CUDA fails"),
         ]:
             is_current = dev_id == current_device
             marker = "●" if is_current else "○"

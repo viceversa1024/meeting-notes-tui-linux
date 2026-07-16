@@ -34,21 +34,27 @@ class NoteMaker:
         transcripts_dir: str = "transcripts",
         ai_provider: str = "none",  # "cloud", "local", or "none"
         ai_model: str = "balanced",  # For cloud: tier, for local: ollama model
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        obsidian_dir: str = ""
     ):
         """
         Initialize note maker.
-        
+
         Args:
             output_dir: Directory to save notes
             transcripts_dir: Directory to save transcripts
             ai_provider: AI provider - "cloud" (OpenRouter), "local" (Ollama), or "none"
             ai_model: Model to use (tier for cloud, model name for local)
             api_key: API key for cloud provider (or use env var)
+            obsidian_dir: Optional Obsidian vault folder that gets a copy of
+                each summary note. Empty disables the export. Created on
+                demand at save time, not here — a bad path must never block
+                note creation.
         """
         logger.info(f"Initializing NoteMaker (output_dir: {output_dir}, transcripts_dir: {transcripts_dir}, ai_provider: {ai_provider}, ai_model: {ai_model})")
         self.output_dir = Path(output_dir).expanduser()
         self.transcripts_dir = Path(transcripts_dir).expanduser()
+        self.obsidian_dir = Path(obsidian_dir).expanduser() if obsidian_dir else None
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.transcripts_dir.mkdir(parents=True, exist_ok=True)
         self.ai_provider = ai_provider
@@ -200,8 +206,26 @@ class NoteMaker:
         )
         note_path.write_text(note_content)
         logger.info(f"Note saved: {note_path}")
-        
+
+        self._export_to_obsidian(note_filename, note_content)
+
         return str(note_path), str(transcript_path), ai_error
+
+    def _export_to_obsidian(self, note_filename: str, note_content: str) -> None:
+        """Best-effort copy of the summary note into the Obsidian vault.
+
+        Never raises: a missing/unwritable vault must not lose the meeting
+        note, which is already safely in output_dir.
+        """
+        if self.obsidian_dir is None:
+            return
+        try:
+            self.obsidian_dir.mkdir(parents=True, exist_ok=True)
+            vault_path = self.obsidian_dir / note_filename
+            vault_path.write_text(note_content)
+            logger.info(f"Note copied to Obsidian vault: {vault_path}")
+        except Exception as exc:  # noqa: BLE001 - export is strictly best-effort
+            logger.error(f"Obsidian export failed ({self.obsidian_dir}): {exc}")
     
     def _extract_simple_summary(self, text: str) -> dict:
         """Extract basic summary information without LLM.

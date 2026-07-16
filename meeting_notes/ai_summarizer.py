@@ -223,16 +223,22 @@ class OpenAISummarizer(BaseSummarizer):
     
     MODELS = {
         "mini": {
-            "id": "gpt-4o-mini",
-            "name": "GPT-4o Mini",
-            "cost_per_1k_input": 0.00015,
-            "cost_per_1k_output": 0.0006,
+            "id": "gpt-5.4-mini",
+            "name": "GPT-5.4 Mini",
+            "cost_per_1k_input": 0.00075,
+            "cost_per_1k_output": 0.0045,
         },
         "standard": {
-            "id": "gpt-4o",
-            "name": "GPT-4o",
+            "id": "gpt-5.6-terra",
+            "name": "GPT-5.6 Terra",
             "cost_per_1k_input": 0.0025,
-            "cost_per_1k_output": 0.01,
+            "cost_per_1k_output": 0.015,
+        },
+        "best": {
+            "id": "gpt-5.6-sol",
+            "name": "GPT-5.6 Sol",
+            "cost_per_1k_input": 0.005,
+            "cost_per_1k_output": 0.03,
         }
     }
     
@@ -265,10 +271,11 @@ class OpenAISummarizer(BaseSummarizer):
         
         for attempt in range(max_retries):
             try:
+                # No temperature: GPT-5.x reasoning models reject non-default
+                # values on chat.completions.
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": self._build_prompt(transcript, user_notes=user_notes)}],
-                    temperature=0.3,
                 )
                 
                 # Calculate cost
