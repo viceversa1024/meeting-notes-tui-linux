@@ -149,3 +149,84 @@ async def test_transcription_provider_toggle_updates_config(tmp_path, monkeypatc
         await pilot.pause()
         assert app.screen.config["transcription_provider"] == "local"
         app.exit()
+
+
+@pytest.mark.asyncio
+async def test_sigusr1_starts_recording_when_idle(tmp_path, monkeypatch):
+    """Ctrl+Alt+M's launcher sends SIGUSR1 to a running app to start
+    recording. A real signal must reach _on_remote_record and trigger
+    action_start_recording (stubbed — no real audio processes)."""
+    import asyncio
+    import os
+    import signal
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    app = MeetingNotesApp()
+    started = []
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.action_start_recording = lambda: started.append(True)
+        os.kill(os.getpid(), signal.SIGUSR1)
+        # add_signal_handler delivers via the event loop; give it a beat.
+        await asyncio.sleep(0.2)
+        await pilot.pause()
+        assert started, "SIGUSR1 should have triggered action_start_recording"
+        app.exit()
+
+
+@pytest.mark.asyncio
+async def test_sigusr1_is_noop_while_recording(tmp_path, monkeypatch):
+    """If a recording is already running, the remote request must not
+    start another one — just a notification."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    app = MeetingNotesApp()
+    started = []
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.action_start_recording = lambda: started.append(True)
+        app.is_recording = True
+        app._on_remote_record()
+        await pilot.pause()
+        assert not started, "must not start a second recording"
+        app.exit()
+
+
+@pytest.mark.asyncio
+async def test_sigusr2_and_rtmin1_drive_stop_and_cancel(tmp_path, monkeypatch):
+    """Ctrl+Alt+S / Ctrl+Alt+X send SIGUSR2 / SIGRTMIN+1: while recording
+    they must dispatch to stop/cancel; while idle they must be no-ops."""
+    import asyncio
+    import os
+    import signal
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    app = MeetingNotesApp()
+    calls = []
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.action_stop_recording = lambda: calls.append("stop")
+        app.action_cancel_recording = lambda: calls.append("cancel")
+
+        # Idle: both signals are guarded no-ops
+        app._on_remote_stop()
+        app._on_remote_cancel()
+        assert calls == []
+
+        # Recording: real signals must reach the right actions
+        app.is_recording = True
+        os.kill(os.getpid(), signal.SIGUSR2)
+        await asyncio.sleep(0.2)
+        await pilot.pause()
+        assert calls == ["stop"]
+
+        os.kill(os.getpid(), signal.SIGRTMIN + 1)
+        await asyncio.sleep(0.2)
+        await pilot.pause()
+        assert calls == ["stop", "cancel"]
+        app.exit()

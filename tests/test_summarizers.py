@@ -80,6 +80,39 @@ def test_openai_no_deprecated_4o_ids_remain():
         assert "4o" not in info["id"], f"OpenAI {tier} still on 4o-era model {info['id']}"
 
 
+def test_context_hint_lands_in_prompt_on_trusted_side():
+    """The context hint is config-authored (trusted) so it must appear
+    BELOW the untrusted-content boundary, not inside it where the
+    injection-hardening tells the model to ignore instructions."""
+    s = OpenAISummarizer(api_key="sk-test", model="mini",
+                         context_hint="I work in AI safety; METR comes up often.")
+    prompt = s._build_prompt("we discussed the meter job requirements")
+
+    boundary = prompt.index("END OF USER CONTENT")
+    assert prompt.index("I work in AI safety; METR comes up often.") > boundary
+    # The correction instruction rides along with the hint
+    assert "mis-hears proper nouns" in prompt
+
+
+def test_no_context_hint_leaves_prompt_unchanged():
+    s = OpenAISummarizer(api_key="sk-test", model="mini")
+    prompt = s._build_prompt("a transcript")
+    assert "BACKGROUND ABOUT THE USER" not in prompt
+
+
+def test_ollama_summarizer_supports_context_hint():
+    """The local Ollama prompt is a separate copy — keep it in sync."""
+    from meeting_notes.summarizer import OllamaSummarizer
+
+    s = OllamaSummarizer(context_hint="I work in AI safety; METR comes up often.")
+    prompt = s._build_prompt("we discussed the meter job requirements")
+    boundary = prompt.index("END OF USER CONTENT")
+    assert prompt.index("I work in AI safety; METR comes up often.") > boundary
+
+    bare = OllamaSummarizer()._build_prompt("a transcript")
+    assert "BACKGROUND ABOUT THE USER" not in bare
+
+
 def test_openai_summarize_omits_temperature(monkeypatch):
     """GPT-5.x reasoning models reject non-default temperature on
     chat.completions — the call must not pin one."""

@@ -214,6 +214,46 @@ def test_language_pin_passed_through(fake_faster_whisper, tmp_path):
     assert kwargs2.get("language") is None
 
 
+def test_context_hint_passed_as_initial_prompt(fake_faster_whisper, tmp_path):
+    """context_hint biases Whisper decoding toward the user's vocabulary
+    ("METR" instead of "meter"); empty hint must stay None so decoding is
+    untouched."""
+    audio = tmp_path / "fake.wav"
+    audio.write_bytes(b"\x00\x00")
+
+    hint = "I work in AI safety; orgs like METR and MATS come up often."
+    t = _transcriber_module().WhisperTranscriber("base", device="cpu", context_hint=hint)
+    t.transcribe(str(audio))
+    _, kwargs = t.model.transcribe_calls[0]
+    assert kwargs.get("initial_prompt") == hint
+
+    t2 = _transcriber_module().WhisperTranscriber("base", device="cpu")
+    t2.transcribe(str(audio))
+    _, kwargs2 = t2.model.transcribe_calls[0]
+    assert kwargs2.get("initial_prompt") is None
+
+
+def test_create_transcriber_threads_context_hint(fake_faster_whisper):
+    """config.context_hint must reach the local transcriber — and the local
+    fallback inside the cloud transcriber (the cloud diarize model itself
+    can't take a prompt)."""
+    from meeting_notes.config import AppConfig
+
+    mod = _transcriber_module()
+    hint = "orgs: METR, MATS, BlueDot"
+
+    local = mod.create_transcriber(AppConfig(context_hint=hint))
+    assert local.context_hint == hint
+
+    cloud = mod.create_transcriber(AppConfig(
+        context_hint=hint,
+        transcription_provider="openai",
+        openai_api_key="sk-test",
+    ))
+    assert isinstance(cloud, mod.OpenAITranscriber)
+    assert cloud.fallback.context_hint == hint
+
+
 def test_transcribe_uses_vad_filter(fake_faster_whisper, tmp_path):
     """VAD must be on: silence at meeting start otherwise poisons language
     detection (observed live: silent first 30s -> 'nn' -> hallucinated

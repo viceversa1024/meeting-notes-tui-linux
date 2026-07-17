@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Meeting Notes - Lazygit-inspired TUI redesign."""
 
+import asyncio
+import signal
 import sys
 import time
 import subprocess
@@ -777,7 +779,8 @@ class MeetingNotesApp(App):
             ai_provider=self.config.ai_provider,
             ai_model=self.config.ai_model,
             api_key=api_key,
-            obsidian_dir=self.config.obsidian_dir
+            obsidian_dir=self.config.obsidian_dir,
+            context_hint=self.config.context_hint
         )
         self.notes_dir = Path(self.config.notes_dir).expanduser()
         self.notes_dir.mkdir(parents=True, exist_ok=True)
@@ -880,7 +883,25 @@ class MeetingNotesApp(App):
         
         # Clear status file on startup
         self._write_status_file("idle")
-        
+
+        # The GNOME keybinds drive a running app via signals (see
+        # gnome/install.sh): Ctrl+Alt+M starts a recording, Ctrl+Alt+S
+        # ends it (process + summarize), Ctrl+Alt+X cancels it.
+        remote_signals = (
+            (signal.SIGUSR1, self._on_remote_record),
+            (signal.SIGUSR2, self._on_remote_stop),
+            (signal.SIGRTMIN + 1, self._on_remote_cancel),
+        )
+        for sig, handler in remote_signals:
+            try:
+                asyncio.get_running_loop().add_signal_handler(sig, handler)
+            except (NotImplementedError, RuntimeError, ValueError):
+                # No signal support here (non-main thread, e.g. some test
+                # harnesses, or an exotic platform) — the keybinds then
+                # only launch, they can't drive the running app.
+                logger.debug(f"handler for signal {sig} not installed", exc_info=True)
+
+
         # Show empty state
         viewer = self.query_one("#note-viewer", NoteViewer)
         viewer.show_empty()
@@ -1259,6 +1280,42 @@ class MeetingNotesApp(App):
                 except Exception as exc:
                     logger.debug(f"level-meter: error stopping {attr}: {exc}")
                 setattr(self, attr, None)
+
+    def _on_remote_record(self) -> None:
+        """SIGUSR1 from the GNOME launcher: start recording if idle.
+
+        add_signal_handler delivers this on the event loop, so driving
+        the UI directly is safe.
+        """
+        logger.info("SIGUSR1 received (remote start-recording request)")
+        if self.is_recording or (self.recorder and self.recorder.is_recording()):
+            self.notify("Already recording")
+            return
+        # A pushed screen (settings, transcript viewer, ...) would sit on
+        # top of the recording view and its bindings; go back home first.
+        while len(self.screen_stack) > 1:
+            self.pop_screen()
+        self.action_start_recording()
+
+    def _on_remote_stop(self) -> None:
+        """SIGUSR2 from the GNOME launcher: end recording and process.
+
+        Keeps whatever title/notes were typed into the recording view —
+        action_stop_recording reads them itself.
+        """
+        logger.info("SIGUSR2 received (remote stop-recording request)")
+        if not self.is_recording:
+            self.notify("No recording to stop")
+            return
+        self.action_stop_recording()
+
+    def _on_remote_cancel(self) -> None:
+        """SIGRTMIN+1 from the GNOME launcher: discard the recording."""
+        logger.info("SIGRTMIN+1 received (remote cancel-recording request)")
+        if not self.is_recording:
+            self.notify("No recording to cancel")
+            return
+        self.action_cancel_recording()
 
     def action_start_recording(self) -> None:
         """Start recording and switch to full-screen recording view."""
@@ -2034,7 +2091,8 @@ class MeetingNotesApp(App):
                 ai_provider=self.config.ai_provider,
                 ai_model=self.config.ai_model,
                 api_key=api_key,
-                obsidian_dir=self.config.obsidian_dir
+                obsidian_dir=self.config.obsidian_dir,
+                context_hint=self.config.context_hint
             )
             self.notes_dir = Path(self.config.notes_dir).expanduser()
             self.notes_dir.mkdir(parents=True, exist_ok=True)

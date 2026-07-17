@@ -52,6 +52,15 @@ class AppConfig:
     # most recently modified.
     voices_dir: str = "~/.config/meeting-notes/voices"
     primary_voice: str = ""
+    # Free-text context about the user and their vocabulary (e.g. "I work
+    # in AI safety; orgs like METR, MATS, BlueDot come up often"). Fed to
+    # local Whisper as initial_prompt to bias decoding toward these
+    # spellings, and to the summarizer so it can fix mis-heard proper
+    # nouns ("meter job" -> METR). The cloud diarize transcription model
+    # doesn't accept a prompt, so there the summarizer is the only layer
+    # that can apply it. Keep it under a few sentences: Whisper only
+    # reads ~200 tokens of prompt.
+    context_hint: str = ""
     notes_dir: str = "notes"
     recordings_dir: str = "recordings"
     transcripts_dir: str = "transcripts"

@@ -322,7 +322,12 @@ gnome/install.sh
 Idempotent installer that sets up:
 - **Launcher** `~/.local/bin/meeting-notes` — opens the TUI in a kitty
   window (single-instance: notifies instead of double-launching)
-- **Keybind** Ctrl+Alt+M
+- **Keybinds** — drive the app from anywhere (signals to the running
+  app; a toast confirms each action):
+  - Ctrl+Alt+M — open the TUI; if already open, start recording
+  - Ctrl+Alt+S — end the recording and process it (keeps any title/notes
+    typed in the recording view)
+  - Ctrl+Alt+X — cancel the recording, discarding the audio
 - **App entry** — "Meeting Notes" in the app grid; right-click → *Pin to
   Dash* for the sidebar
 - **Top-bar indicator** with recording status (autostarts on login)

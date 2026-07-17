@@ -35,7 +35,8 @@ class NoteMaker:
         ai_provider: str = "none",  # "cloud", "local", or "none"
         ai_model: str = "balanced",  # For cloud: tier, for local: ollama model
         api_key: Optional[str] = None,
-        obsidian_dir: str = ""
+        obsidian_dir: str = "",
+        context_hint: str = ""
     ):
         """
         Initialize note maker.
@@ -50,6 +51,9 @@ class NoteMaker:
                 each summary note. Empty disables the export. Created on
                 demand at save time, not here — a bad path must never block
                 note creation.
+            context_hint: Free-text background about the user, passed to
+                the summarizer so it can fix mis-transcribed proper nouns
+                (see AppConfig.context_hint)
         """
         logger.info(f"Initializing NoteMaker (output_dir: {output_dir}, transcripts_dir: {transcripts_dir}, ai_provider: {ai_provider}, ai_model: {ai_model})")
         self.output_dir = Path(output_dir).expanduser()
@@ -70,17 +74,17 @@ class NoteMaker:
                     from .ai_summarizer import OpenAISummarizer, AnthropicSummarizer, OpenRouterSummarizer  # type: ignore
                     
                     if ai_provider == "openai":
-                        self.summarizer = OpenAISummarizer(api_key=api_key, model=ai_model)
+                        self.summarizer = OpenAISummarizer(api_key=api_key, model=ai_model, context_hint=context_hint)
                         model_name = OpenAISummarizer.MODELS[ai_model]["name"]
                         self.model_label = model_name
                         logger.info(f"AI summarization enabled (OpenAI: {model_name})")
                     elif ai_provider == "anthropic":
-                        self.summarizer = AnthropicSummarizer(api_key=api_key, model=ai_model)
+                        self.summarizer = AnthropicSummarizer(api_key=api_key, model=ai_model, context_hint=context_hint)
                         model_name = AnthropicSummarizer.MODELS[ai_model]["name"]
                         self.model_label = model_name
                         logger.info(f"AI summarization enabled (Anthropic: {model_name})")
                     elif ai_provider == "openrouter":
-                        self.summarizer = OpenRouterSummarizer(api_key=api_key, model=ai_model)
+                        self.summarizer = OpenRouterSummarizer(api_key=api_key, model=ai_model, context_hint=context_hint)
                         model_name = OpenRouterSummarizer.MODELS[ai_model]["name"]
                         self.model_label = model_name
                         logger.info(f"AI summarization enabled (OpenRouter: {model_name})")
@@ -98,7 +102,7 @@ class NoteMaker:
                     from .summarizer import OllamaSummarizer  # type: ignore
                     # Defensive fallback: empty model name reaches
                     # `ollama run "" <prompt>` and errors with "model is required".
-                    self.summarizer = OllamaSummarizer(model=ai_model or "llama3.2:3b")
+                    self.summarizer = OllamaSummarizer(model=ai_model or "llama3.2:3b", context_hint=context_hint)
                     self.model_label = f"Ollama {ai_model or 'llama3.2:3b'}"
                     logger.info(f"AI summarization enabled (Local Ollama: {ai_model})")
                 except Exception as e:

@@ -65,7 +65,13 @@ def _looks_like_cuda_failure(err: BaseException) -> bool:
 class WhisperTranscriber:
     """Transcribe audio files using faster-whisper."""
 
-    def __init__(self, model_name: str = "base", device: str = "cpu", language: str = "en"):
+    def __init__(
+        self,
+        model_name: str = "base",
+        device: str = "cpu",
+        language: str = "en",
+        context_hint: str = "",
+    ):
         """Initialize the transcriber.
 
         Args:
@@ -79,6 +85,10 @@ class WhisperTranscriber:
                 empty string auto-detects. Belt-and-suspenders with VAD: a
                 quiet/noisy opening can still misdetect and mistranscribe
                 the whole meeting (ported from omdenton's fork).
+            context_hint: Free-text vocabulary/context passed to Whisper as
+                ``initial_prompt`` so domain proper nouns decode with their
+                real spellings ("METR" instead of "meter"). Whisper only
+                reads the last ~224 tokens of it.
         """
         if device not in _VALID_DEVICES:
             logger.warning(f"Unknown whisper device {device!r}, falling back to 'cpu'")
@@ -87,6 +97,7 @@ class WhisperTranscriber:
         self.model_name = model_name
         self.requested_device = device
         self.language = language
+        self.context_hint = context_hint
         self.active_device: Optional[str] = None
         self.model = None  # type: ignore[assignment]
 
@@ -160,6 +171,9 @@ class WhisperTranscriber:
             language=self.language or None,
             task="transcribe",
             vad_filter=True,
+            # Biases decoding toward the user's vocabulary (org names,
+            # jargon) so they aren't normalized into common words.
+            initial_prompt=self.context_hint or None,
         )
 
         # faster-whisper returns a generator; decoding happens as we iterate.
@@ -430,12 +444,16 @@ def create_transcriber(config):
     if config.transcription_provider == "openai":
         api_key = config.openai_api_key or os.getenv("OPENAI_API_KEY")
         if api_key:
+            # Note: the cloud diarize model doesn't accept a prompt, so
+            # config.context_hint only reaches the local fallback here;
+            # cloud mis-hearings get corrected by the summarizer instead.
             return OpenAITranscriber(
                 api_key=api_key,
                 fallback=WhisperTranscriber(
                     config.whisper_model,
                     device=config.whisper_device,
                     language=config.whisper_language,
+                    context_hint=config.context_hint,
                 ),
                 voices_dir=config.voices_dir,
                 language=config.whisper_language,
@@ -449,6 +467,7 @@ def create_transcriber(config):
         config.whisper_model,
         device=config.whisper_device,
         language=config.whisper_language,
+        context_hint=config.context_hint,
     )
 
 

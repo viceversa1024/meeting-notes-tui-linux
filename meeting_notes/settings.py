@@ -463,6 +463,21 @@ class SettingsScreen(Screen):
             classes="settings-hint",
         ))
 
+        widgets.append(Static(""))  # Spacer
+        widgets.append(Static("Context Hint", classes="settings-label"))
+        widgets.append(Input(
+            value=self.config.get("context_hint", ""),
+            id="context-hint-input",
+            classes="settings-input",
+            placeholder="e.g. I work in AI safety; orgs like METR, MATS, BlueDot come up often",
+        ))
+        widgets.append(Static(
+            "Who you are + names/jargon that come up often. Helps local "
+            "Whisper spell them right and lets the summarizer fix cloud "
+            "mis-hearings ('meter' → METR). A few sentences max.",
+            classes="settings-hint",
+        ))
+
         return widgets
 
     def render_obsidian_section(self) -> list:
@@ -998,6 +1013,7 @@ class SettingsScreen(Screen):
         """
         live_inputs = {
             "whisper-language-input": "whisper_language",
+            "context-hint-input": "context_hint",
             "obsidian-dir-input": "obsidian_dir",
             "voices-dir-input": "voices_dir",
         }
