@@ -8,6 +8,7 @@ and the body byte-for-byte.
 
 from __future__ import annotations
 
+import html
 import re
 import secrets
 from pathlib import Path
@@ -140,5 +141,20 @@ def render_note_html(note_path: Path) -> str:
         match = _TITLE_RE.search(fm)
         if match:
             title = match.group(1)
-    content = md.markdown(_strip_footer(body), extensions=['extra'])
-    return _PAGE_TEMPLATE.format(title=title, content=content)
+
+    # Note bodies are AI summaries of untrusted transcript text (see the
+    # prompt-injection boundary note in CLAUDE.md), and this HTML is served
+    # publicly. python-markdown's default behavior lets raw inline/block
+    # HTML pass straight through to the output, which would make transcript
+    # content like "<script>...</script>" render as live, executable markup
+    # (stored XSS). Deregister the two handlers responsible for that
+    # pass-through — the 'html_block' preprocessor and the 'html' inline
+    # pattern — so any literal HTML in the body is instead treated as plain
+    # text and entity-escaped like the rest of the content. Markdown syntax
+    # (headings, emphasis, lists, tables, code, links) is untouched because
+    # none of that goes through the raw-HTML path.
+    converter = md.Markdown(extensions=['extra'])
+    converter.preprocessors.deregister('html_block')
+    converter.inlinePatterns.deregister('html')
+    content = converter.convert(_strip_footer(body))
+    return _PAGE_TEMPLATE.format(title=html.escape(title), content=content)

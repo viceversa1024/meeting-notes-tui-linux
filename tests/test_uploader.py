@@ -144,3 +144,17 @@ def test_render_without_frontmatter_still_works(tmp_path):
     html = render_note_html(bare)
     assert "<h1>Standalone</h1>" in html
     assert "<title>Meeting note</title>" in html
+
+
+def test_render_escapes_raw_html(tmp_path):
+    from meeting_notes.uploader import render_note_html
+    evil = tmp_path / "evil.md"
+    evil.write_text(
+        '---\ntitle: "Sneaky <img> & Co"\n---\n\n'
+        '# Hi\n\n<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>\n'
+    )
+    html = render_note_html(evil)
+    assert "<script>" not in html
+    assert "<img src=x" not in html
+    assert "alert(1)" in html  # visible as text, not executable
+    assert "<title>Sneaky &lt;img&gt; &amp; Co</title>" in html
