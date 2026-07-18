@@ -8,6 +8,8 @@ imports boto3 lazily inside NoteUploader._client() precisely so this works.
 
 from __future__ import annotations
 
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -158,3 +160,122 @@ def test_render_escapes_raw_html(tmp_path):
     assert "<img src=x" not in html
     assert "alert(1)" in html  # visible as text, not executable
     assert "<title>Sneaky &lt;img&gt; &amp; Co</title>" in html
+
+
+# --- NoteUploader over a fake boto3 ----------------------------------------
+
+class FakeS3Client:
+    def __init__(self):
+        self.put_calls = []
+        self.delete_calls = []
+        self.put_error = None
+        self.delete_error = None
+
+    def put_object(self, **kwargs):
+        if self.put_error:
+            raise self.put_error
+        self.put_calls.append(kwargs)
+
+    def delete_object(self, **kwargs):
+        if self.delete_error:
+            raise self.delete_error
+        self.delete_calls.append(kwargs)
+
+
+@pytest.fixture
+def fake_s3(monkeypatch) -> FakeS3Client:
+    """Install a fake boto3 whose client() returns a controllable S3 stub."""
+    client = FakeS3Client()
+    fake_mod = types.ModuleType("boto3")
+    fake_mod.client = lambda *args, **kwargs: client
+    monkeypatch.setitem(sys.modules, "boto3", fake_mod)
+    return client
+
+
+@pytest.fixture
+def upload_config():
+    from meeting_notes.config import AppConfig
+    return AppConfig(upload_bucket="test-bucket",
+                     upload_base_url="https://notes.harrywaterman.com")
+
+
+def test_upload_puts_html_and_writes_frontmatter(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader
+    url, already = NoteUploader(upload_config).upload(note)
+    assert not already
+    assert len(fake_s3.put_calls) == 1
+    call = fake_s3.put_calls[0]
+    assert call["Bucket"] == "test-bucket"
+    assert call["Key"].startswith("n/")
+    assert call["ContentType"] == "text/html; charset=utf-8"
+    assert b"<!DOCTYPE html>" in call["Body"]
+    slug = call["Key"][len("n/"):]
+    assert url == f"https://notes.harrywaterman.com/n/{slug}"
+    assert read_share_url(note) == url
+
+
+def test_upload_already_published_returns_existing_without_put(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader
+    write_share_url(note, "https://notes.harrywaterman.com/n/existing-slug")
+    url, already = NoteUploader(upload_config).upload(note)
+    assert already
+    assert url == "https://notes.harrywaterman.com/n/existing-slug"
+    assert fake_s3.put_calls == []
+
+
+def test_upload_failure_leaves_note_untouched(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader, UploadError
+    fake_s3.put_error = RuntimeError("network down")
+    with pytest.raises(UploadError):
+        NoteUploader(upload_config).upload(note)
+    assert read_share_url(note) is None
+    assert note.read_text() == SAMPLE_NOTE
+
+
+def test_unpublish_deletes_then_clears_frontmatter(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader
+    write_share_url(note, "https://notes.harrywaterman.com/n/doomed-slug")
+    NoteUploader(upload_config).unpublish(note)
+    assert fake_s3.delete_calls == [{"Bucket": "test-bucket", "Key": "n/doomed-slug"}]
+    assert read_share_url(note) is None
+    assert note.read_text() == SAMPLE_NOTE
+
+
+def test_unpublish_failure_keeps_share_url(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader, UploadError
+    write_share_url(note, "https://notes.harrywaterman.com/n/sticky-slug")
+    fake_s3.delete_error = RuntimeError("access denied")
+    with pytest.raises(UploadError):
+        NoteUploader(upload_config).unpublish(note)
+    # Failed delete must leave the link recorded (still live at origin)
+    assert read_share_url(note) == "https://notes.harrywaterman.com/n/sticky-slug"
+
+
+def test_unpublish_tolerates_missing_key(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader
+    write_share_url(note, "https://notes.harrywaterman.com/n/gone-slug")
+    fake_s3.delete_error = RuntimeError("An error occurred (NoSuchKey) when calling DeleteObject")
+    NoteUploader(upload_config).unpublish(note)  # must not raise
+    assert read_share_url(note) is None
+
+
+def test_unpublish_unpublished_note_raises(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader, UploadError
+    with pytest.raises(UploadError):
+        NoteUploader(upload_config).unpublish(note)
+
+
+def test_missing_boto3_gives_install_hint(note, upload_config, monkeypatch):
+    from meeting_notes.uploader import NoteUploader, UploadError
+    import builtins
+    real_import = builtins.__import__
+
+    def no_boto3(name, *args, **kwargs):
+        if name == "boto3":
+            raise ImportError("No module named 'boto3'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_boto3)
+    monkeypatch.delitem(sys.modules, "boto3", raising=False)
+    with pytest.raises(UploadError, match=r"meeting-notes\[upload\]"):
+        NoteUploader(upload_config).upload(note)

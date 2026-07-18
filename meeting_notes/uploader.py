@@ -14,6 +14,7 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
+from .config import AppConfig
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -158,3 +159,70 @@ def render_note_html(note_path: Path) -> str:
     converter.inlinePatterns.deregister('html')
     content = converter.convert(_strip_footer(body))
     return _PAGE_TEMPLATE.format(title=html.escape(title), content=content)
+
+
+class NoteUploader:
+    """Publish/unpublish a note against the configured S3 bucket."""
+
+    def __init__(self, config: AppConfig):
+        self.config = config
+        self.base_url = config.upload_base_url.rstrip('/')
+
+    def _client(self):
+        try:
+            import boto3  # lazy: keeps boto3 optional and out of CI
+        except ImportError:
+            raise UploadError(
+                "boto3 not installed — run: pip install 'meeting-notes[upload]'"
+            )
+        return boto3.client("s3", region_name=self.config.upload_region)
+
+    def upload(self, note_path: Path) -> tuple[str, bool]:
+        """Publish. Returns (url, already_published).
+
+        share_url is written only after a successful PUT, so a failed
+        upload leaves the note byte-identical.
+        """
+        existing = read_share_url(note_path)
+        if existing:
+            return existing, True
+        html = render_note_html(note_path)
+        slug = generate_slug()
+        client = self._client()
+        try:
+            client.put_object(
+                Bucket=self.config.upload_bucket,
+                Key=f"n/{slug}",
+                Body=html.encode("utf-8"),
+                ContentType="text/html; charset=utf-8",
+            )
+        except UploadError:
+            raise
+        except Exception as e:
+            logger.error(f"Publish failed for {note_path.name}: {e}", exc_info=True)
+            raise UploadError(f"Upload failed: {e}")
+        url = f"{self.base_url}/n/{slug}"
+        write_share_url(note_path, url)
+        logger.info(f"Published {note_path.name} -> {url}")
+        return url, False
+
+    def unpublish(self, note_path: Path) -> str:
+        """Delete from S3, then clear share_url. Returns the dead URL.
+
+        S3 delete goes first so a failure leaves the link recorded (it is
+        still live at the origin). A missing key counts as success.
+        """
+        url = read_share_url(note_path)
+        if not url:
+            raise UploadError("Note is not published")
+        slug = url.rsplit('/n/', 1)[-1]
+        client = self._client()
+        try:
+            client.delete_object(Bucket=self.config.upload_bucket, Key=f"n/{slug}")
+        except Exception as e:
+            if "NoSuchKey" not in str(e) and "404" not in str(e):
+                logger.error(f"Unpublish failed for {note_path.name}: {e}", exc_info=True)
+                raise UploadError(f"Unpublish failed: {e}")
+        remove_share_url(note_path)
+        logger.info(f"Unpublished {note_path.name} ({url})")
+        return url
