@@ -91,6 +91,7 @@ _PAGE_TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
 <title>{title}</title>
 <style>
 body {{ max-width: 42rem; margin: 2rem auto; padding: 0 1rem;

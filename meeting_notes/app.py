@@ -246,6 +246,7 @@ class NoteViewer(ScrollableContainer):
     
     def show_empty(self):
         """Show empty state."""
+        self.current_note = None
         self.remove_children()
         self.mount(Static("[dim]Select a meeting to view notes\n\nPress 'r' to start recording[/dim]"))
 

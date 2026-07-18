@@ -155,3 +155,10 @@ def test_upload_enabled_accepts_https_base_url():
     config = AppConfig(ai_provider="none", upload_bucket="my-bucket")
     valid, error = validate_config(config)
     assert valid, error
+
+
+def test_upload_enabled_rejects_http_base_url():
+    config = AppConfig(ai_provider="none", upload_bucket="my-bucket", upload_base_url="http://insecure")
+    valid, error = validate_config(config)
+    assert not valid
+    assert "upload_base_url" in error

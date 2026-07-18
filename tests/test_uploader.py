@@ -162,6 +162,29 @@ def test_render_escapes_raw_html(tmp_path):
     assert "<title>Sneaky &lt;img&gt; &amp; Co</title>" in html
 
 
+def test_render_page_has_csp(note):
+    from meeting_notes.uploader import render_note_html
+    html = render_note_html(note)
+    assert 'http-equiv="Content-Security-Policy"' in html
+    assert "default-src 'none'" in html
+
+
+def test_render_attr_list_and_js_uri_are_inert_under_csp(tmp_path):
+    from meeting_notes.uploader import render_note_html
+    evil = tmp_path / "evil2.md"
+    evil.write_text(
+        '---\ntitle: "T"\n---\n\n'
+        '[c](#){: onclick="alert(1)" }\n\n'
+        '[j](javascript:alert(1))\n\n'
+        '![b](https://evil.example/beacon.png)\n'
+    )
+    html = render_note_html(evil)
+    # attr_list/javascript:/external-img may appear in markup; the CSP meta
+    # is the layer that makes them inert. Pin that it is present and strict.
+    assert "default-src 'none'" in html
+    assert "style-src 'unsafe-inline'" in html
+
+
 # --- NoteUploader over a fake boto3 ----------------------------------------
 
 class FakeS3Client:
@@ -279,3 +302,11 @@ def test_missing_boto3_gives_install_hint(note, upload_config, monkeypatch):
     monkeypatch.delitem(sys.modules, "boto3", raising=False)
     with pytest.raises(UploadError, match=r"meeting-notes\[upload\]"):
         NoteUploader(upload_config).upload(note)
+
+
+def test_upload_base_url_trailing_slash_normalized(note, fake_s3, upload_config):
+    from meeting_notes.uploader import NoteUploader
+    upload_config.upload_base_url = "https://notes.harrywaterman.com/"
+    url, _ = NoteUploader(upload_config).upload(note)
+    assert "com//n/" not in url
+    assert url.startswith("https://notes.harrywaterman.com/n/")
