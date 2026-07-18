@@ -66,4 +66,6 @@ jobs:
             tests/test_audio_test.py \
             tests/test_mix_gains.py \
             tests/test_setup_health.py \
-            tests/test_meeting_routing.py
+            tests/test_meeting_routing.py \
+            tests/test_editor_launch.py \
+            tests/test_clipboard.py
