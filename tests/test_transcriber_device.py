@@ -145,3 +145,31 @@ def test_unknown_device_string_falls_back_to_cpu(fake_whisper, monkeypatch):
     transcriber_mod = _fresh_transcriber_module(monkeypatch)
     t = transcriber_mod.WhisperTranscriber("base", device="hocus-pocus")
     assert t.requested_device == "cpu"
+
+
+# --- language pinning --------------------------------------------------------
+
+def test_transcribe_pins_configured_language(fake_whisper, tmp_path):
+    from meeting_notes.transcriber import WhisperTranscriber
+
+    audio = tmp_path / "a.wav"
+    audio.write_bytes(b"\x00\x00")
+
+    t = WhisperTranscriber("base", device="cpu", language="en")
+    t.transcribe(str(audio))
+
+    (_, kwargs), = t.model.transcribe_calls
+    assert kwargs["language"] == "en"
+
+
+def test_transcribe_empty_language_auto_detects(fake_whisper, tmp_path):
+    from meeting_notes.transcriber import WhisperTranscriber
+
+    audio = tmp_path / "a.wav"
+    audio.write_bytes(b"\x00\x00")
+
+    t = WhisperTranscriber("base", device="cpu", language="")
+    t.transcribe(str(audio))
+
+    (_, kwargs), = t.model.transcribe_calls
+    assert kwargs["language"] is None

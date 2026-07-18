@@ -1,0 +1,40 @@
+Meeting: Test meeting (re-transcribed with Whisper medium)
+Date: July 15, 2026 at 08:02 PM
+Duration: 1 minute, 54 seconds
+Source: recordings/temp-mic-2026-07-15-200241.wav (clean mic leg)
+
+────────────────────────────────────────────────────────────
+
+**[00:00]** Alright, we are recording. This is just a test meeting. Yeah, we're gonna get this going.
+
+**[00:13]** Yeah, okay, so let me talk a little bit about what I'm doing right now. So basically, one
+
+**[00:20]** problem we have in the ecosystem is we have a lot of experts who have lots of good ideas
+
+**[00:28]** for things. A lot of AI safety ideas of promising research directions, but they're very capacity
+
+**[00:37]** constrained because they're doing their day job all day. So when they come across a good
+
+**[00:41]** research direction, sometimes they just tell someone in Slack and then sometimes they write
+
+**[00:52]** it down and turn it into a list of project directions. They post that on LessWrong or
+
+**[00:57]** they post it on their personal website, but generally they have no way of like, they can
+
+**[01:03]** pitch people as they go about their day, but they have no way of connecting to a broader
+
+**[01:07]** source of talent. And I think in most markets, this is solved by prices, but we don't really
+
+**[01:14]** have good price signals in AI safety. So we are left with having to... Yeah, it's just not
+
+**[01:27]** ideal. So one way I think we can make this better, and this is Jonah's idea, is to connect the
+
+**[01:33]** fellowships that exist right now with these ideas that are by the external experts. And the
+
+**[01:38]** fellowships have lots of talent, they have lots of very ambitious young talent that's low
+
+**[01:43]** context and wouldn't be able to come up with good strategic directions themselves, but they could
+
+**[01:47]** maybe execute on ideas that are given to them. Yeah, so this is generally what I'm working on
+
+**[01:53]** right now.

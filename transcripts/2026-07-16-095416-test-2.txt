@@ -1,0 +1,14 @@
+Meeting: test 2
+Date: July 16, 2026 at 09:54 AM
+Duration: 31 seconds
+Recording: 
+
+────────────────────────────────────────────────────────────
+
+**[00:00]** Okay, this is a test.
+
+**[00:21]** I want to see if it gets every word I'm saying.
+
+**[00:24]** I'm just going to speak in a normal voice and we're going to see if this works.
+
+**[00:29]** Okay, thank you.

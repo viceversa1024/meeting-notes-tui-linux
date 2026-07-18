@@ -756,6 +756,7 @@ class MeetingNotesApp(App):
         self.transcriber = WhisperTranscriber(
             self.config.whisper_model,
             device=self.config.whisper_device,
+            language=self.config.whisper_language,
         )
         
         # Get appropriate API key based on provider (check config first, then env vars)
@@ -2018,6 +2019,7 @@ class MeetingNotesApp(App):
             self.transcriber = WhisperTranscriber(
                 self.config.whisper_model,
                 device=self.config.whisper_device,
+                language=self.config.whisper_language,
             )
             
             # Get appropriate API key based on provider (check config first, then env vars)

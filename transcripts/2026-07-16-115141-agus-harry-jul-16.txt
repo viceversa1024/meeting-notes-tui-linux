@@ -1,0 +1,648 @@
+Meeting: agus <-> harry jul 16
+Date: July 16, 2026 at 11:51 AM
+Duration: 17 minutes, 10 seconds
+Recording: 
+
+────────────────────────────────────────────────────────────
+
+**[04:00]** Hey, sorry, you had sent me a message about joining earlier.
+
+**[04:16]** Oh, no worries. Yeah, we've got 15, that's fine. But yeah, get into it.
+
+**[04:27]** How are you doing? I'm doing good. I am getting, what is it, week four or something?
+
+**[04:35]** I'm a generator. It's good, going well. How about you, how are you doing?
+
+**[04:41]** Good, yeah. It's been a very busy week, but doing a lot of useful things.
+
+**[04:47]** Wait, so did you complete the regranting project?
+
+**[04:53]** I got a bunch of feedback, and I'm like, okay, I probably need to either, I need to rework some stuff, so I'm going to spend another week doing that.
+
+**[05:02]** I see.
+
+**[05:03]** And in the meantime, I am helping Jonah and Saheb with this, like talking to fellowships and trying to get a sense of how we use all this expert input that they've been getting during the field strategy spring.
+
+**[05:17]** Sounds great. Yeah.
+
+**[05:24]** Yeah, those were, thank you for leaving those comments. It is super useful. And yeah, I'd love to talk about that.
+
+**[05:37]** Were you able to read some of the comments, or should I, I mean, I can happily summarize them.
+
+**[05:42]** Yeah, I read them, and I was like, okay, this makes a lot of sense. I think, yeah, like one of the problems I'm thinking about is like, the hardest part about this is trying to figure out where in the selection process can you like, does having like an external source of ideas make the most sense, or like when is this most useful?
+
+**[06:07]** Yeah.
+
+**[06:09]** Go ahead, go ahead.
+
+**[06:11]** Yeah, I think that's what I was imagining too. I think it basically would work similar to Janitor, with this like this, though I guess I would be less, it would be less interesting to enter, so like default to doing.
+
+**[06:33]** But it could just be like, you know, we're open to both research proposals that have been drafted by you, or we have this database of projects, feel free to like list projects in which you'd be interested in like potentially advising, sorry, like mentoring.
+
+**[06:46]** I think there's something here where like, it is harder for me to assess how much of a like research mentors fit is with the specific project, just by looking at their CV.
+
+**[06:55]** Like they might say, oh, I'm happy to advise on this like Redwood, make into a project or whatever. And I'm like, cool, do you understand it? Like, how much experience do you like maybe that's like, like, simply a question that you figure out by like, fixing the application systems, it's like clear that like you're developing a project so that it's not like it's just like, oh, I'm not going to do this whole thing, I'm like, I'm not going to do this whole thing, like, I'm going to do this whole thing, but how are you going to do that, and then it's like, how are you going to do that, and then you're going to do it you're like, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah, yeah.
+
+**[07:21]** как бы, подключитьchallenge systemen,
+
+**[07:24]** det är klart att du bevijar dem att det är en match för ett specifikt projekt,
+
+**[07:28]** men det här gör svar till mig.
+
+**[07:30]** Och jag skulle gärna vilja se om jag gör detta.
+
+**[07:33]** Det är lite tröjtigt, för
+
+**[07:35]** Sparmen-applikationer är påverkade och släpper nästa vecka.
+
+**[07:40]** Och så skulle jag vilja ha gjort det i några veckor senare.
+
+**[07:43]** Och så skulle vi ha fått väldigt snabb feedback om om det här var hjälpt eller inte, men ja.
+
+**[07:49]** Ja, jag använder det.
+
+**[07:51]** Och jag kommer att kolla det ut.
+
+**[07:53]** Jag kommer att gå runt till några andra fellowships också och hoppa att vi kan få några.
+
+**[07:57]** Men Sparmen skulle definitivt ha varit den snabbaste feedbacken.
+
+**[08:01]** Jag tror att på vad du sa om att försöka skapa en mentorfattare,
+
+**[08:06]** jag tror att en del av det vi ska göra,
+
+**[08:10]** som Jonah, jag och Sahab,
+
+**[08:12]** är att försöka få en bra känsla från experten,
+
+**[08:15]** hur mycket kontext, hur mycket kontext,
+
+**[08:17]** vad tycker de att du behöver ta ut det?
+
+**[08:19]** Vad är de visen av en person?
+
+**[08:22]** Och så skulle det vara,
+
+**[08:24]** hoppningsvis, en stor del av det.
+
+**[08:26]** Det skulle vara, det är vad en mentor skulle se ut som.
+
+**[08:28]** Och hoppningsvis, folk skulle självselekt från det.
+
+**[08:30]** Men jag tror det kan vara svårt att evaluera från en CV.
+
+**[08:35]** Ja, det gör ju ett syn.
+
+**[08:37]** Ja, jag tror det kan fungera.
+
+**[08:41]** Jag känner mig faktiskt lite bäst att jag inte har tänkt på att göra Sparmen.
+
+**[08:48]** I alla fall är det alla de fundamentala asumtioner Sparmen gör.
+
+**[08:52]** Alltid börjar jag att jag känner att,
+
+**[08:54]** jävlar, vi skulle kunna fråga den här obvisa asumtionen,
+
+**[08:56]** som år sen.
+
+**[08:59]** Nu när du har förbjudit detta, så är det, ja,
+
+**[09:02]** på den lilla sidan, det verkar vara värt att försöka,
+
+**[09:05]** och så kanske vi kommer att uppkomma att det är väldigt några färdiga,
+
+**[09:07]** och så är det inte ett förslag.
+
+**[09:09]** Ja, jag är väldigt beredad för att göra en experiment runt detta.
+
+**[09:15]** I the meantime, vi är inte i tid att göra detta fungera för Karindran och Sparmen,
+
+**[09:21]** men det du vill ha är till exempel att få tillväxt till perspektivade mentorer eller acceptade mentorer.
+
+**[09:26]** Du kan göra en intervju, du kan försöka på olika saker.
+
+**[09:31]** Man, även om du får mig något,
+
+**[09:35]** i den nästa dag eller så,
+
+**[09:38]** jag kan även skicka en fråga till mentor-obvisa-formen,
+
+**[09:41]** eftersom många av er ska fylla det ut över den nästa veckan.
+
+**[09:44]** Så det kan vara något som,
+
+**[09:48]** i framtiden, Rens och Spar, vi tänker på att förbereda projekt eller vad som helst.
+
+**[09:54]** Är du intresserad av att jobba på projekt som hjälper dig att vallida att det finns mentoreintresse i att göra sådana här grejer?
+
+**[10:03]** Ja, det är super. Det är fantastiskt.
+
+**[10:07]** Jag kan få det i två timer.
+
+**[10:09]** Jag kan få dig en fråga att skicka till dem.
+
+**[10:12]** Bra, och det är väldigt bra,
+
+**[10:15]** för det skulle inte bara vara acceptade mentorer, utan också perspektivade mentorer också.
+
+**[10:20]** Så det blir inte exakt en pool som du skulle vilja ha för detta,
+
+**[10:23]** men det skulle kunna skicka till att det skulle vara intresserad av det här.
+
+**[10:29]** Ja, det är fantastiskt.
+
+**[10:31]** Det är nog den bästa vi kan göra på den här notisen.
+
+**[10:34]** Bra.
+
+**[10:36]** Och jag gillar att,
+
+**[10:38]** jag vet inte om det blir en fantastisk success,
+
+**[10:43]** men det finns några frågor som jag tror att det kan svara väldigt snabbt.
+
+**[10:46]** Hur har vi uttryckt våra experter,
+
+**[10:49]** eller externa människor,
+
+**[10:51]** på vad en mentor,
+
+**[10:54]** vad kind of mentor kan göra ett projekt,
+
+**[10:56]** hur intresserade är folk på att ta makrostrategisk advicen?
+
+**[10:59]** Det är bara många saker som jag tror kan användas för att informera field strategy.
+
+**[11:04]** Om de är samarbete, det verkar som att det är ett väldigt intressant projekt.
+
+**[11:07]** Om de är samarbete, så vet jag inte.
+
+**[11:11]** De kanske inte har mycket småning,
+
+**[11:14]** men jag tror att jag trots min småning på detta,
+
+**[11:18]** jag gör såna här kvartal gånger,
+
+**[11:20]** för att jag säger att jag är en mentor.
+
+**[11:22]** Det verkar väldigt intresserad,
+
+**[11:25]** men jag tror att det andra frågan är,
+
+**[11:29]** är folk villiga göra detta?
+
+**[11:31]** Det är en av dem.
+
+**[11:33]** Hur bra är mentorskap,
+
+**[11:35]** när mentor inte har den överall makrostrategiska direktiv de försöker ha?
+
+**[11:40]** Och det finns också något här,
+
+**[11:43]** hur högst nivå vill du vara med?
+
+**[11:46]** Man kan tänka sig att en expert påverkar en stream av jobb,
+
+**[11:52]** och inom den streamen är mentorarna
+
+**[11:54]** som är i stort sett påverkade,
+
+**[11:56]** och de har mycket,
+
+**[11:58]** de har ännu flera olika case.
+
+**[12:01]** Och i praktiken händer det redan.
+
+**[12:04]** Många projektproposaler är,
+
+**[12:07]** vi följer sig genom ett resurser som satsas på
+
+**[12:10]** Rettwood Research, på den här posten, eller vad som helst.
+
+**[12:13]** Och vi förbereder de här experimenterna.
+
+**[12:16]** Men alternativt ser ut som,
+
+**[12:18]** oh, nej,
+
+**[12:19]** det här som kommer att bli givet till mentorerna
+
+**[12:21]** är faktiskt ganska detaljerat.
+
+**[12:23]** Det är faktiskt,
+
+**[12:24]** de här är experimenterna som någon vill ha,
+
+**[12:26]** och det är mest för att operera
+
+**[12:28]** en beskrivning av experimenterna,
+
+**[12:30]** eller något sådant.
+
+**[12:31]** Och det är,
+
+**[12:32]** jag tror att mentorerna
+
+**[12:34]** förbereder sig mest på satsning och utbildning,
+
+**[12:36]** men inte så mycket på strategisk taste.
+
+**[12:37]** Kanske är det bra,
+
+**[12:38]** kanske inte.
+
+**[12:39]** Det är inte bra,
+
+**[12:40]** det beror på hur mentorskapet fungerar.
+
+**[12:42]** Och hur mycket kommunikation vill du ha med,
+
+**[12:45]** som du sa, en tim,
+
+**[12:47]** kanske en kall med mentorerna,
+
+**[12:49]** kanske det är bra,
+
+**[12:50]** men kanske, om det är produktdrivande,
+
+**[12:52]** eller du vill ha en nära loop,
+
+**[12:54]** men det skulle inte ge det punktet
+
+**[12:56]** om expertet skulle mentora dessa människor,
+
+**[12:59]** men kanske de är fortfarande,
+
+**[13:01]** de är en användare,
+
+**[13:02]** och de ska fortfarande vara involverade
+
+**[13:04]** på något sätt,
+
+**[13:05]** för att förbereda utbildningar,
+
+**[13:06]** på intermedie utbildningar,
+
+**[13:07]** som projektet förbereder.
+
+**[13:08]** Så det är en annan direktionsreferens.
+
+**[13:12]** Ja, det är,
+
+**[13:13]** jag tycker att det är
+
+**[13:14]** väldigt mycket som ett spektrum
+
+**[13:16]** från att kontrakta jobb på en end,
+
+**[13:18]** eller det är,
+
+**[13:19]** här är några experimenter
+
+**[13:20]** jag inte har tid att göra,
+
+**[13:22]** här är spektren,
+
+**[13:23]** göra sådana saker,
+
+**[13:24]** och det är verifierande.
+
+**[13:26]** Och på andra end,
+
+**[13:27]** det är vad som händer nu,
+
+**[13:28]** här är en vaj agenda,
+
+**[13:30]** vi gör så mycket vi kan,
+
+**[13:31]** här är några idéer
+
+**[13:33]** som vi kanske inte gör.
+
+**[13:34]** Och ja,
+
+**[13:35]** jag tror att det vore bra
+
+**[13:36]** att klarifiera
+
+**[13:37]** det här,
+
+**[13:38]** att klarifiera en teori av förändring,
+
+**[13:39]** och några av de städer,
+
+**[13:40]** och jag vill,
+
+**[13:41]** jag tror att de mesta arbeten
+
+**[13:43]** jag gör på detta,
+
+**[13:44]** är att säkerställa att vi har,
+
+**[13:47]** att det vi får från experter
+
+**[13:50]** är detaljerat,
+
+**[13:51]** och har en del,
+
+**[13:52]** vilket, vilket slags,
+
+**[13:54]** är detta?
+
+**[13:55]** Är detta en kontraktsjobb,
+
+**[13:56]** eller är detta en större sak?
+
+**[13:57]** Vad ska det berätta?
+
+**[13:58]** Och det är,
+
+**[13:59]** ja, det är,
+
+**[14:00]** det är,
+
+**[14:01]** det är kul,
+
+**[14:02]** kanske det här,
+
+**[14:03]** det är,
+
+**[14:04]** ett projekt,
+
+**[14:05]** det ser ut som om du kreer,
+
+**[14:06]** som om datavisa är produktet för dig.
+
+**[14:08]** Som om datavisa,
+
+**[14:09]** projektledare
+
+**[14:10]** har varit,
+
+**[14:11]** som om det är produktet,
+
+**[14:12]** och så har du,
+
+**[14:13]** som om ditt klient
+
+**[14:14]** i ett sätt,
+
+**[14:15]** är ett fellowship.
+
+**[14:16]** Ett fellowship är,
+
+**[14:17]** som om du känner
+
+**[14:18]** att du använder ett datavisa för dig.
+
+**[14:19]** Som om,
+
+**[14:20]** att flera fellowships
+
+**[14:21]** kan använda alla samma datavisa eller vad som helst.
+
+**[14:22]** Som om,
+
+**[14:23]** är du känd med AI Safety Ideas?
+
+**[14:26]** Är detta en mega-list?
+
+**[14:28]** Ja,
+
+**[14:29]** men inte längre.
+
+**[14:31]** Men inte längre.
+
+**[14:32]** Så,
+
+**[14:33]** basically,
+
+**[14:34]** I've had research forever ago
+
+**[14:35]** had this website called,
+
+**[14:36]** yeah,
+
+**[14:37]** yeah,
+
+**[14:38]** yeah,
+
+**[14:39]** and it's basically when you had a halkathon,
+
+**[14:41]** you would be like,
+
+**[14:42]** pick a thing from the list.
+
+**[14:43]** And like,
+
+**[14:44]** I think basically no one updates this anymore.
+
+**[14:46]** So like,
+
+**[14:47]** you know,
+
+**[14:48]** it's dead in the water.
+
+**[14:49]** But like,
+
+**[14:50]** maybe you want something like this,
+
+**[14:51]** but like,
+
+**[14:52]** way better done.
+
+**[14:53]** Like I think the problem is,
+
+**[14:54]** like here the idea is under scoped,
+
+**[14:56]** there's no research attached to it.
+
+**[14:58]** Like you kind of want to like,
+
+**[15:00]** you want also like,
+
+**[15:01]** credentialing going on.
+
+**[15:02]** You don't want like,
+
+**[15:03]** a bunch of randos mixed in with ideas from like,
+
+**[15:06]** top experts or something like that.
+
+**[15:08]** Like,
+
+**[15:09]** yeah.
+
+**[15:10]** I think it's great that,
+
+**[15:11]** I do think like one thing that they tried to add to AI Safety Ideas,
+
+**[15:14]** I think unsuccessful is like,
+
+**[15:15]** they wanted to add like,
+
+**[15:17]** funding.
+
+**[15:18]** So like,
+
+**[15:19]** you could say like,
+
+**[15:20]** oh, this idea I would like,
+
+**[15:21]** you know,
+
+**[15:22]** I would give an award to whoever finishes this project, right?
+
+**[15:25]** Well,
+
+**[15:26]** it's possible to me that this should also exist.
+
+**[15:28]** It's just like,
+
+**[15:29]** probably like this project was not executed very well.
+
+**[15:31]** Like just looking at the list of experts that they know,
+
+**[15:33]** listen to them,
+
+**[15:34]** I have no idea who these people are.
+
+**[15:36]** But yeah.
+
+**[15:37]** Yeah.
+
+**[15:38]** I think this like came from,
+
+**[15:39]** you know,
+
+**[15:40]** Jenna and Sahab like talking to a bunch of experts and being like,
+
+**[15:43]** okay,
+
+**[15:44]** there are like,
+
+**[15:45]** we have no prices in AI Safety.
+
+**[15:46]** Like there are no prizes.
+
+**[15:47]** There's no way to like,
+
+**[15:48]** figure out what people need to do.
+
+**[15:49]** Like we're just going to like,
+
+**[15:50]** forget all of it and just be like,
+
+**[15:52]** I trust 10 people.
+
+**[15:53]** You know,
+
+**[15:54]** I trust 15 people.
+
+**[15:55]** Like let's go from there and see like how far we can get these ideas.
+
+**[15:58]** And yeah,
+
+**[15:59]** but AI Safety.
+
+**[16:00]** Yeah.
+
+**[16:01]** It's great because also like,
+
+**[16:03]** I don't know,
+
+**[16:04]** like I could see Spark perfectly saying like on our mentors page,
+
+**[16:07]** something like,
+
+**[16:08]** we're open to novel research proposals,
+
+**[16:11]** but also like,
+
+**[16:12]** for independent researchers,
+
+**[16:14]** people that are more junior researchers,
+
+**[16:16]** we encourage people to step pick proposals from the like research database.
+
+**[16:21]** Whatever.
+
+**[16:22]** Also we're willing to double the,
+
+**[16:24]** you know,
+
+**[16:25]** any prices in the plot.
+
+**[16:26]** Like,
+
+**[16:27]** you know,
+
+**[16:28]** we're not willing to double the price.
+
+**[16:29]** We're willing to double the price.
+
+**[16:30]** So yeah,
+
+**[16:31]** we're willing to double the price.
+
+**[16:32]** So yeah,
+
+**[16:33]** like,
+
+**[16:34]** but we're also willing to double the price.
+
+**[16:36]** So yeah,
+
+**[16:37]** like I'm interested in that.
+
+**[16:38]** I'm interested in that.
+
+**[16:39]** I'm looking forward to it.
+
+**[16:40]** We'll look at it as like interesting mechanisms you can come up with around
+
+**[16:42]** something like this.
+
+**[16:43]** I agree.
+
+**[16:44]** I think I'm super excited to go forward with this.
+
+**[16:46]** All right.
+
+**[16:47]** So I'll get that.
+
+**[16:48]** I'm going to run to this Jake Sullivan talk because I'm very interested in like
+
+**[16:50]** National Security.
+
+**[16:51]** Yep.
+
+**[16:52]** But I'm going to get you a question that you can add within like by noon by 1 PM.
+
+**[16:56]** Sure.
+
+**[16:57]** What's the most far people?
+
+**[16:58]** Sounds good.
+
+**[16:59]** Sounds good.
+
+**[17:00]** Cool.
+
+**[17:01]** Cool.
+
+**[17:02]** Okay.
+
+**[17:03]** We'll be in touch.
+
+**[17:04]** Send me a question.
+
+**[17:05]** We can get it up.
+
+**[17:06]** Great.
+
+**[17:07]** Thank you so much.
+
+**[17:08]** Take care.
+
+**[17:09]** Take care.

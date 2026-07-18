@@ -55,7 +55,7 @@ def _looks_like_cuda_failure(err: BaseException) -> bool:
 class WhisperTranscriber:
     """Transcribe audio files using Whisper."""
 
-    def __init__(self, model_name: str = "base", device: str = "cpu"):
+    def __init__(self, model_name: str = "base", device: str = "cpu", language: str = "en"):
         """Initialize the transcriber.
 
         Args:
@@ -65,12 +65,17 @@ class WhisperTranscriber:
                 CPU pipeline and avoids broken CUDA installs taking the app
                 down. ``"auto"`` lets Whisper pick (CUDA when available) but
                 still falls back to CPU on load failure.
+            language: Language code (e.g. ``"en"``) to pin decoding to; empty
+                string auto-detects. Auto-detection reads only the opening
+                seconds of audio, so a quiet or noisy intro can misdetect and
+                transcribe the whole meeting in the wrong language.
         """
         if device not in _VALID_DEVICES:
             logger.warning(f"Unknown whisper device {device!r}, falling back to 'cpu'")
             device = "cpu"
         logger.info(f"Initializing WhisperTranscriber (model: {model_name}, device: {device})")
         self.model_name = model_name
+        self.language = language
         self.requested_device = device
         self.active_device: Optional[str] = None
         self.model = None  # type: ignore[assignment]
@@ -149,7 +154,7 @@ class WhisperTranscriber:
 
         result = self.model.transcribe(
             str(audio_file),
-            language=None,
+            language=self.language or None,
             task="transcribe",
             verbose=False,
             fp16=use_fp16,

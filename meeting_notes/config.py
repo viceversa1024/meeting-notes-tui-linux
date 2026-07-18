@@ -33,6 +33,11 @@ class AppConfig:
     # privacy-first CPU pipeline and dodges broken-CUDA-wheel crashes like
     # "no kernel image is available for execution on the device".
     whisper_device: str = "cpu"
+    # Language code to pin transcription to (e.g. "en"); empty string =
+    # auto-detect. Auto-detection reads only the opening seconds of audio,
+    # so a quiet/noisy intro can misdetect and transcribe the whole meeting
+    # in the wrong language.
+    whisper_language: str = "en"
     notes_dir: str = "notes"
     recordings_dir: str = "recordings"
     transcripts_dir: str = "transcripts"

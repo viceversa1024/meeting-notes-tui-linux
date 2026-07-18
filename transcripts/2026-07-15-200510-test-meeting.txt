@@ -1,0 +1,30 @@
+Meeting: Test meeting
+Date: July 15, 2026 at 08:05 PM
+Duration: 2 minutes, 1 second
+Recording: 
+
+────────────────────────────────────────────────────────────
+
+**[00:00]** Alright, this is just a test meeting.
+
+**[00:07]** Yeah, we're going to get this going.
+
+**[00:14]** Yeah, okay, so let me talk a little bit about what I'm doing right now.
+
+**[00:19]** So basically, one problem we have in the ecosystem is we have a lot of experts who have lots of good ideas for things.
+
+**[00:29]** A lot of AI safety ideas, like promising research directions, but they're very capacity constrained because they're doing their day job all day.
+
+**[00:39]** So when they come across a good research direction, sometimes they just tell someone in Slack and then sometimes they write it down and turn it into a list of project directions they post that on like less wrong or they post it on their personal website.
+
+**[00:58]** But generally they have no way of like, like they can pitch people as they go about their day, but they have no way of like connecting to a broader source of talent.
+
+**[01:09]** And I think in like most markets, this is solved by like prices, but we don't really have good price signals and AI safety.
+
+**[01:18]** We are left with like having to, yeah, it's not, it's just not ideal.
+
+**[01:28]** So one way I think we can make this better, and like this is Jonas idea is to connect the fellowships that exist right now with these ideas that are by the external experts.
+
+**[01:38]** And the fellowships have like lots of talent. They have lots of like very ambitious young talent that's like low context and wouldn't be able to come up with like good strategic directions themselves, but they could maybe execute on ideas that are given to them.
+
+**[01:50]** Yeah, so this is like generally what I'm working on right now.
