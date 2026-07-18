@@ -68,6 +68,12 @@ class AppConfig:
     # note (markdown only; transcripts and recordings stay out). Empty
     # string disables the export.
     obsidian_dir: str = ""
+    # Unlisted web publishing (S3+CloudFront, see cloud/setup.sh). Empty
+    # upload_bucket disables the feature. AWS credentials come from the
+    # standard boto3 chain (env vars / ~/.aws), never from this file.
+    upload_bucket: str = ""
+    upload_region: str = "us-east-1"
+    upload_base_url: str = "https://notes.harrywaterman.com"
     editor: str = "nvim"
     terminal_file_browser: str = ""  # Terminal file browser (ranger, vidir, nnn, lf, vifm, yazi, etc.)
     recording_mode: str = "combined"
@@ -266,7 +272,16 @@ def validate_config(config: AppConfig) -> tuple[bool, Optional[str]]:
             return False, f"Transcripts directory does not exist: {transcripts_path}\nPlease create it first or use a relative path like 'transcripts'"
         if not transcripts_path.is_dir():
             return False, f"Transcripts path is not a directory: {transcripts_path}"
-    
+
+    # Validate upload settings (only when publishing is enabled)
+    if config.upload_bucket:
+        import re
+        if not re.match(r'^https://[^/]+', config.upload_base_url or ""):
+            return False, (
+                f"Invalid upload_base_url: {config.upload_base_url!r}. "
+                "Must be an https:// URL like https://notes.harrywaterman.com"
+            )
+
     return True, None
 
 

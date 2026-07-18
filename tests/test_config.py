@@ -126,3 +126,32 @@ def test_to_safe_dict_redacts_keys():
     assert "supersecretkey" not in safe["anthropic_api_key"]
     assert "openaikey" not in safe["openai_api_key"]
     assert "1234567890" not in safe["openrouter_api_key"]
+
+
+# --- notes upload config ---------------------------------------------------
+
+def test_upload_fields_default_off():
+    config = AppConfig()
+    assert config.upload_bucket == ""
+    assert config.upload_region == "us-east-1"
+    assert config.upload_base_url == "https://notes.harrywaterman.com"
+
+
+def test_upload_disabled_skips_base_url_validation():
+    # Feature off: even a garbage base URL must not fail validation.
+    config = AppConfig(ai_provider="none", upload_bucket="", upload_base_url="not a url")
+    valid, error = validate_config(config)
+    assert valid, error
+
+
+def test_upload_enabled_rejects_bad_base_url():
+    config = AppConfig(ai_provider="none", upload_bucket="my-bucket", upload_base_url="ftp://nope")
+    valid, error = validate_config(config)
+    assert not valid
+    assert "upload_base_url" in error
+
+
+def test_upload_enabled_accepts_https_base_url():
+    config = AppConfig(ai_provider="none", upload_bucket="my-bucket")
+    valid, error = validate_config(config)
+    assert valid, error
