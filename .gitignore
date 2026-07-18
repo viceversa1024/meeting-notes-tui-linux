@@ -23,7 +23,8 @@ config.yml
 *.pem
 
 # Docs
-docs/
+docs/*
+!docs/superpowers/
 
 # Pytest cache
 .pytest_cache/
