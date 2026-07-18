@@ -102,3 +102,12 @@ def test_write_share_url_requires_frontmatter(tmp_path):
 def test_remove_share_url_noop_when_absent(note):
     remove_share_url(note)  # must not raise
     assert note.read_text() == SAMPLE_NOTE
+
+
+def test_write_share_url_twice_replaces_not_duplicates(note):
+    write_share_url(note, "https://notes.harrywaterman.com/n/first")
+    write_share_url(note, "https://notes.harrywaterman.com/n/second")
+    assert note.read_text().count("share_url") == 1
+    assert read_share_url(note) == "https://notes.harrywaterman.com/n/second"
+    remove_share_url(note)
+    assert note.read_text() == SAMPLE_NOTE

@@ -55,7 +55,16 @@ def write_share_url(note_path: Path, url: str) -> None:
     fm, body = split_frontmatter(content)
     if fm is None:
         raise UploadError("Note has no frontmatter — can't record share_url")
-    new_fm = fm.rstrip('\n') + f'\nshare_url: "{url}"\n'
+    # If a share_url line exists, replace it; otherwise append.
+    if _SHARE_URL_RE.search(fm):
+        new_fm = re.sub(
+            r'^share_url:[^\n]*',
+            f'share_url: "{url}"',
+            fm,
+            flags=re.MULTILINE
+        )
+    else:
+        new_fm = fm.rstrip('\n') + f'\nshare_url: "{url}"\n'
     note_path.write_text(f"---{new_fm}---{body}")
 
 
