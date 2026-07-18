@@ -562,6 +562,55 @@ class ConfirmDeleteScreen(ModalScreen):
             self.dismiss(False)
 
 
+class ConfirmUnpublishScreen(ModalScreen):
+    """Confirm removing a published note from the web."""
+
+    CSS = """
+    ConfirmUnpublishScreen {
+        align: center middle;
+    }
+
+    #unpublish-dialog {
+        width: 60;
+        height: auto;
+        border: thick $warning;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #unpublish-message {
+        text-align: center;
+        margin: 1 0;
+        color: $text;
+    }
+
+    #unpublish-buttons {
+        width: 100%;
+        height: auto;
+        align: center middle;
+        margin-top: 1;
+    }
+    """
+
+    def __init__(self, meeting_title: str, **kwargs):
+        super().__init__(**kwargs)
+        self.meeting_title = meeting_title
+
+    def compose(self) -> ComposeResult:
+        with Container(id="unpublish-dialog"):
+            yield Static("🔗 Unpublish note?", id="unpublish-title")
+            yield Static(
+                f'"{self.meeting_title}"\n\nThe share link stops working immediately.',
+                id="unpublish-message",
+            )
+            with Horizontal(id="unpublish-buttons"):
+                yield Button("Cancel", variant="primary", id="cancel-button", classes="confirm-button")
+                yield Button("Unpublish", variant="warning", id="unpublish-button", classes="confirm-button")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "unpublish-button")
+
+
 class MeetingNotesApp(App):
     """Main application with Lazygit-inspired layout."""
     
@@ -742,6 +791,8 @@ class MeetingNotesApp(App):
         Binding("e", "edit_title", "Edit Title", show=True),
         Binding("t", "view_transcript", "Transcript", show=True),
         Binding("T", "manage_tags", "Tags", show=True),
+        Binding("u", "publish_note", "Publish", show=True),
+        Binding("U", "unpublish_note", "Unpublish", show=False),
         Binding("comma", "open_settings", "Settings", show=True),
         Binding("A", "audio_test", "Audio Test", show=True),
         Binding("q", "quit", "Quit", show=True),
@@ -1847,7 +1898,92 @@ class MeetingNotesApp(App):
                     
                 except Exception as e:
                     self.notify(f"Failed to delete: {e}", severity="error")
-    
+
+    def action_publish_note(self) -> None:
+        """Publish the selected note as an unlisted web page (or re-copy its link)."""
+        viewer = self.query_one("#note-viewer", NoteViewer)
+        if not viewer.current_note:
+            self.notify("No note selected", severity="warning")
+            return
+        if not self.config.upload_bucket:
+            self.notify(
+                "Uploads not configured — set upload_bucket in config.yaml (see cloud/setup.sh)",
+                severity="warning",
+            )
+            return
+        from meeting_notes.uploader import read_share_url
+        existing = read_share_url(viewer.current_note)
+        if existing:
+            self._copy_share_url(existing, already=True)
+            return
+        self.notify("Publishing note...", severity="information")
+        self.publish_note_worker(str(viewer.current_note))
+
+    def _copy_share_url(self, url: str, already: bool = False) -> None:
+        from meeting_notes.clipboard import copy_text_to_clipboard
+        try:
+            ok, _ = copy_text_to_clipboard(url)
+        except Exception:
+            ok = False
+        prefix = "Already published" if already else "✓ Published"
+        # If the clipboard is unavailable, surface the URL itself.
+        suffix = " — link copied" if ok else f" — {url}"
+        self.notify(f"{prefix}{suffix}", severity="information", timeout=10)
+
+    def _refresh_current_note(self) -> None:
+        viewer = self.query_one("#note-viewer", NoteViewer)
+        if viewer.current_note:
+            viewer.show_note(viewer.current_note)
+
+    @work(thread=True)
+    def publish_note_worker(self, note_path: str) -> None:
+        from meeting_notes.uploader import NoteUploader, UploadError
+        try:
+            url, already = NoteUploader(self.config).upload(Path(note_path))
+        except UploadError as e:
+            self.call_from_thread(self.notify, str(e), severity="error")
+            return
+        except Exception as e:
+            self.call_from_thread(self.notify, f"Upload failed: {e}", severity="error")
+            return
+        self.call_from_thread(self._copy_share_url, url, already)
+        self.call_from_thread(self._refresh_current_note)
+
+    def action_unpublish_note(self) -> None:
+        """Unpublish the selected note after confirmation."""
+        viewer = self.query_one("#note-viewer", NoteViewer)
+        if not viewer.current_note:
+            self.notify("No note selected", severity="warning")
+            return
+        from meeting_notes.uploader import read_share_url
+        if not read_share_url(viewer.current_note):
+            self.notify("Note is not published", severity="warning")
+            return
+        self.push_screen(
+            ConfirmUnpublishScreen(viewer.current_note.stem),
+            self.handle_unpublish_confirmation,
+        )
+
+    def handle_unpublish_confirmation(self, confirmed: Optional[bool]) -> None:
+        if confirmed is True:
+            viewer = self.query_one("#note-viewer", NoteViewer)
+            if viewer.current_note:
+                self.unpublish_note_worker(str(viewer.current_note))
+
+    @work(thread=True)
+    def unpublish_note_worker(self, note_path: str) -> None:
+        from meeting_notes.uploader import NoteUploader, UploadError
+        try:
+            NoteUploader(self.config).unpublish(Path(note_path))
+        except UploadError as e:
+            self.call_from_thread(self.notify, str(e), severity="error")
+            return
+        except Exception as e:
+            self.call_from_thread(self.notify, f"Unpublish failed: {e}", severity="error")
+            return
+        self.call_from_thread(self.notify, "✓ Unpublished — link is dead", severity="information")
+        self.call_from_thread(self._refresh_current_note)
+
     def action_edit_title(self) -> None:
         """Edit the title of the selected meeting."""
         viewer = self.query_one("#note-viewer", NoteViewer)
