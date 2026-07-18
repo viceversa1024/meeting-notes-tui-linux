@@ -243,6 +243,26 @@ copied there after saving. Notes carry Obsidian-friendly frontmatter:
 participants (best guess), transcription model, summary model, tags. A
 missing or unwritable vault never blocks note creation.
 
+## Publishing notes to the web (optional)
+
+Press `u` on a note to publish its summary as an **unlisted** page at
+`https://notes.harrywaterman.com/n/<random-slug>` and copy the link;
+press `U` to unpublish (the link dies immediately). Unlisted means anyone
+with the link can view it, but nothing lists or indexes the notes.
+
+One-time setup:
+
+1. `pip install 'meeting-notes[upload]'` (boto3 + markdown)
+2. Run `cloud/setup.sh` (needs the AWS CLI with credentials). It prints
+   two DNS records to add at your registrar: an ACM validation CNAME,
+   then — after re-running once the cert validates — the final
+   `notes → <distribution>.cloudfront.net` CNAME.
+3. Set `upload_bucket` (and optionally `upload_region`,
+   `upload_base_url`) in `~/.config/meeting-notes/config.yaml`.
+
+Only the summary note is published — never the transcript or audio. The
+share link is recorded as `share_url:` in the note's frontmatter.
+
 ## Output Format
 
 Notes are saved as markdown files in `notes/`:
