@@ -37,6 +37,7 @@ dependencies = [
 openai = ["openai>=1.0.0"]
 anthropic = ["anthropic>=0.18.0"]
 openrouter = ["openrouter>=0.1.0"]
+upload = ["boto3>=1.34", "markdown>=3.5"]
 cloud = [
     "openai>=1.0.0",
     "anthropic>=0.18.0",
@@ -46,6 +47,8 @@ all = [
     "openai>=1.0.0",
     "anthropic>=0.18.0",
     "openrouter>=0.1.0",
+    "boto3>=1.34",
+    "markdown>=3.5",
 ]
 dev = [
     "pytest>=7.0",
